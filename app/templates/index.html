@@ -76,7 +76,8 @@
     <section class="card span-2" aria-labelledby="list-heading">
       <h2 id="list-heading">Submissions</h2>
       <p class="lede">Most recent first.</p>
-      <div class="table-wrap">
+      <!-- Scrolls sideways on narrow screens, so it must be reachable and scrollable by keyboard (WCAG 2.1.1). -->
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Submissions table, scrollable">
         <table data-testid="submissions-table">
           <thead>
             <tr>

@@ -51,3 +51,44 @@ def test_axe_core_reports_no_violations_after_validation_error(page):
     results = Axe().run(page, options={"runOnly": {"type": "tag", "values": ["wcag2a", "wcag2aa"]}})
     serious = [v for v in results.response["violations"] if v["impact"] in ("serious", "critical")]
     assert not serious, [v["id"] for v in serious]
+
+
+def test_axe_core_reports_no_violations_on_phone_viewport(mobile_page, fixtures, clean_store):
+    """Narrow screens change the layout: the results table becomes a sideways-scrolling
+    region, which must be keyboard reachable. A desktop-only scan missed this (DEF-107)."""
+    from axe_playwright_python.sync_playwright import Axe
+
+    home = SubmissionPage(mobile_page).open()
+    home.submit(**fixtures("plagiarised_paper"))
+    results = Axe().run(mobile_page, options={"runOnly": {"type": "tag", "values": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]}})
+    assert not results.response["violations"], [v["id"] for v in results.response["violations"]]
+
+
+def test_form_can_be_completed_with_keyboard_only(page, clean_store):
+    """WCAG 2.1.1: every action is available from the keyboard."""
+    home = SubmissionPage(page).open()
+    home.title_input.focus()
+    page.keyboard.type("Keyboard only paper")
+    page.keyboard.press("Tab")
+    page.keyboard.type("No Mouse")
+    page.keyboard.press("Tab")
+    page.keyboard.type("This submission was typed and sent without touching the mouse.")
+    page.keyboard.press("Tab")
+    page.keyboard.press("Enter")
+    home.row_for_title("Keyboard only paper").wait_for(timeout=5000)
+
+
+def test_scrollable_results_region_is_keyboard_focusable(page):
+    SubmissionPage(page).open()
+    region = page.get_by_role("region", name="Submissions table, scrollable")
+    assert region.get_attribute("tabindex") == "0"
+
+
+def test_landmark_regions_have_unique_names(page):
+    """Two regions with the same name are indistinguishable in a screen reader's landmark list."""
+    SubmissionPage(page).open()
+    names = page.evaluate(
+        """() => [...document.querySelectorAll('section[aria-labelledby], aside[aria-labelledby], [role=region]')].map(e =>
+             e.getAttribute('aria-label') || document.getElementById(e.getAttribute('aria-labelledby')).textContent.trim())"""
+    )
+    assert len(names) == len(set(names)), names

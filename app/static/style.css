@@ -162,6 +162,7 @@ textarea { resize: vertical; min-height: 9rem; }
 
 /* Table */
 .table-wrap { overflow-x: auto; margin-top: .5rem; }
+.table-wrap:focus-visible { outline: 3px solid rgba(22, 48, 92, .45); outline-offset: 2px; border-radius: 6px; }
 table { width: 100%; border-collapse: collapse; font-size: .94rem; }
 th, td { text-align: left; padding: .75rem .6rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
 th { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }

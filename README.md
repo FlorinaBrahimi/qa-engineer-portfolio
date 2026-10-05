@@ -57,7 +57,7 @@ it never appears in this repository. Load `.env` before running anything against
 | **AWS (S3, Lambda, CloudWatch)** | [aws/](aws/) production code + [tests/aws/](tests/aws/) via moto; DynamoDB backend in [app/storage.py](app/storage.py) |
 | **Live AWS deployment + CD** | [infra/](infra/) CloudFormation + deploy script, [.github/workflows/deploy.yml](.github/workflows/deploy.yml) deploys and tests the live URL. Runbook: [infra/README.md](infra/README.md) |
 | **Security testing** | Behavioural tests in [tests/security/](tests/security/) and `SecurityTest.java`; dependency scan (pip-audit) and static analysis (bandit) via `make audit`. See [security/README.md](security/README.md) |
-| **Accessibility testing** | [tests/accessibility/test_a11y.py](tests/accessibility/test_a11y.py): structural checks + full axe-core WCAG 2.1 AA scans, bundled so they run offline |
+| **Accessibility testing** | Audit tool [tools/a11y_report.py](tools/a11y_report.py) produces an HTML report per run: axe-core WCAG 2.2 A/AA across four page states, plus keyboard and reflow checks. Tests in [tests/accessibility/](tests/accessibility/). Evidence, limits and legal position: [docs/11_accessibility.md](docs/11_accessibility.md) |
 | **Unit tests + coverage** | [tests/unit/](tests/unit/); whole-suite coverage is 97% and CI fails below 80% |
 | **Accounts / external setup** | [docs/09_accounts_and_setup.md](docs/09_accounts_and_setup.md), [.env.example](.env.example) |
 | **Professional development** | [docs/08_professional_development_plan.md](docs/08_professional_development_plan.md) |
@@ -81,7 +81,7 @@ Jenkinsfile, .github/workflows/ci.yml, Dockerfile, docker-compose.yml, Makefile
 
 | Suite | Target | Result |
 |---|---|---|
-| Python, 157 tests (unit, api, ui, integration, scale, security, a11y, mobile, aws, ai_testing) | local | 156 passed, 1 skipped (no Appium server) |
+| Python, 161 tests (unit, api, ui, integration, scale, security, a11y, mobile, aws, ai_testing) | local | 160 passed, 1 skipped (no Appium server) |
 | Python smoke, API, security, UI, accessibility | live AWS | 89 passed |
 | AI-generated API tests, 45 cases | local and live AWS | 45 passed after fixing the defect they found |
 | Java REST Assured | local | 50 passed, the AWS-only class is skipped |
@@ -91,4 +91,4 @@ Jenkinsfile, .github/workflows/ci.yml, Dockerfile, docker-compose.yml, Makefile
 | Jenkins pipeline, all stages | local Jenkins 2.584 | Build passed: 195 tests passed, 1 skipped, in 84 seconds |
 | pip-audit, bandit, actionlint | repo | No known vulnerabilities, no findings, clean |
 
-Defects these runs found and fixed are logged as DEF-104, DEF-105 and DEF-106 in [docs/04_defect_management.md](docs/04_defect_management.md).
+Defects these runs found and fixed are logged as DEF-104 to DEF-107 in [docs/04_defect_management.md](docs/04_defect_management.md).

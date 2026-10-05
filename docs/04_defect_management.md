@@ -65,6 +65,13 @@ Notes:        suspected cause, related tickets
 - **Expected:** no technology disclosure. **Actual:** `Server: Werkzeug/3.1 Python/3.12`
 - **Resolution:** `Server` header overridden in the app's `after_request` hook so every environment behaves the same. Verified by the Java and Python security suites, closed.
 
+### DEF-107 (S3 / P2) UI: results table cannot be scrolled by keyboard on narrow screens
+
+- **Environment:** all, at viewport widths below 820 px
+- **Found by:** the accessibility audit (`tools/a11y_report.py`), axe rule `scrollable-region-focusable`. The existing desktop-only scan could not see it.
+- **Expected:** a region that scrolls sideways can be focused and scrolled with the keyboard (WCAG 2.1.1). **Actual:** keyboard users could not reach the Similarity and Status columns on a phone-width layout.
+- **Resolution:** the table container is now focusable with a visible focus ring and its own region label. A first attempt gave it the same name as the surrounding section, which a new landmark-uniqueness test caught before release. Phone-viewport and keyboard-only tests added. Verified, closed.
+
 ### DEF-106 (S2 / P1) API: wrongly typed field crashes with HTTP 500
 
 - **Environment:** all

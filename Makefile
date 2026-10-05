@@ -62,3 +62,7 @@ jira:
 
 jira-dry-run:
 	python3 -m tools.jira_sync --dry-run
+
+# Accessibility audit: writes reports/accessibility.html, .json and .md
+a11y:
+	python3 -m tools.a11y_report
