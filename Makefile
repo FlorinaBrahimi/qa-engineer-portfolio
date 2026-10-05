@@ -25,8 +25,9 @@ java:
 java-aws:
 	cd java-api-tests && mvn -B clean test -Paws -Dapi.key=$${SUBMISSION_API_KEY:-qa-demo-key}
 
+# Starts the app itself, runs JMeter, writes reports/perf-html, perf.xml and perf.md.
 perf:
-	jmeter -n -t performance/submissions_load_test.jmx -Jhost=localhost -Jport=5001 -l reports/perf.jtl
+	performance/run.sh
 
 flaky:
 	python ai_testing/predict_flaky.py ai_testing/test_history.csv

@@ -53,7 +53,7 @@ it never appears in this repository. Load `.env` before running anything against
 | **Predictive analysis / smart automation** | [ai_testing/predict_flaky.py](ai_testing/predict_flaky.py) + its own tests; wired into both pipelines |
 | **Evaluating modern QA tools** | [docs/07_ai_in_qa_evaluation.md](docs/07_ai_in_qa_evaluation.md) |
 | **Mobile automation** | [tests/mobile/test_mobile.py](tests/mobile/test_mobile.py): device emulation always, Appium when a server is available |
-| **Performance (JMeter)** | [performance/submissions_load_test.jmx](performance/submissions_load_test.jmx), executed with results recorded in [performance/README.md](performance/README.md) |
+| **Performance (JMeter)** | [performance/](performance/): plan, run script and thresholds. Runs in every pipeline build; results are converted to JUnit by [tools/jmeter_report.py](tools/jmeter_report.py) so they appear with the other test results, and a breached threshold blocks the deploy |
 | **AWS (S3, Lambda, CloudWatch)** | [aws/](aws/) production code + [tests/aws/](tests/aws/) via moto; DynamoDB backend in [app/storage.py](app/storage.py) |
 | **Live AWS deployment + CD** | [infra/](infra/) CloudFormation + deploy script, [.github/workflows/deploy.yml](.github/workflows/deploy.yml) deploys and tests the live URL. Runbook: [infra/README.md](infra/README.md) |
 | **Security testing** | Behavioural tests in [tests/security/](tests/security/) and `SecurityTest.java`; dependency scan (pip-audit) and static analysis (bandit) via `make audit`. See [security/README.md](security/README.md) |
@@ -81,7 +81,7 @@ Jenkinsfile, .github/workflows/ci.yml, Dockerfile, docker-compose.yml, Makefile
 
 | Suite | Target | Result |
 |---|---|---|
-| Python, 142 tests (unit, api, ui, integration, scale, security, a11y, mobile, aws, ai_testing) | local | 141 passed, 1 skipped (no Appium server) |
+| Python, 157 tests (unit, api, ui, integration, scale, security, a11y, mobile, aws, ai_testing) | local | 156 passed, 1 skipped (no Appium server) |
 | Python smoke, API, security, UI, accessibility | live AWS | 89 passed |
 | AI-generated API tests, 45 cases | local and live AWS | 45 passed after fixing the defect they found |
 | Java REST Assured | local | 50 passed, the AWS-only class is skipped |

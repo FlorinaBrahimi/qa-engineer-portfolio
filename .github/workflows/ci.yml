@@ -107,6 +107,46 @@ jobs:
         if: always()
         with: { name: coverage, path: reports/coverage.xml }
 
+  performance:
+    runs-on: ubuntu-latest
+    env:
+      JMETER_VERSION: "5.6.3"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - name: Cache JMeter
+        id: jmeter-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/jmeter
+          key: jmeter-${{ env.JMETER_VERSION }}
+      - name: Install JMeter
+        if: steps.jmeter-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz" | tar -xz -C "$HOME"
+          mv "$HOME/apache-jmeter-${JMETER_VERSION}" "$HOME/jmeter"
+      - run: pip install flask
+      - name: Load test with thresholds
+        run: |
+          export PATH="$HOME/jmeter/bin:$PATH"
+          performance/run.sh
+      - name: Add results to the run summary
+        if: always()
+        run: |
+          if [ -f reports/perf.md ]; then cat reports/perf.md >> "$GITHUB_STEP_SUMMARY"; else echo "JMeter produced no results." >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jmeter-report
+          path: |
+            reports/perf-html/
+            reports/perf.xml
+            reports/perf.md
+            reports/perf.jtl
+
   predictive-analysis:
     runs-on: ubuntu-latest
     steps:

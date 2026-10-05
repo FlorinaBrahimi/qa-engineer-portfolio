@@ -9,7 +9,7 @@ plugins a default Jenkins install has: Pipeline, Git, JUnit and Timestamper.
 |---|---|
 | Python 3.12 | all pytest stages, security scans |
 | Java 17+ and Maven | Java API suite |
-| JMeter | nightly performance stage only |
+| JMeter | performance stage |
 
 On macOS with Homebrew: `brew install maven jmeter`, plus Python from python.org or Homebrew.
 The Jenkinsfile adds the Homebrew and python.org locations to `PATH` itself, because Jenkins
@@ -36,7 +36,7 @@ dependencies. Later builds reuse the downloaded browser.
 | Smoke | `pytest -m smoke`; the build stops here on failure |
 | Test (parallel) | Unit, API, security and AWS tests; UI, accessibility and mobile; integration and scale; pip-audit and bandit; the Java suite against a locally started app |
 | Predictive analysis | Flakiness report from run history |
-| Performance | JMeter, only on the nightly timer run |
+| Performance | JMeter on every build (20 users, 30 s); the nightly run uses 50 users for 120 s. Results join the test report |
 
 Results appear under **Test Result** on the build page, and the HTML reports, JMeter dashboard
 and flakiness report are under **Build Artifacts**.

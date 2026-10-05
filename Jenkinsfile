@@ -1,7 +1,6 @@
 // Continuous Testing pipeline for the Submission Service.
 //
-// Runs on a plain Jenkins agent with Python 3.12, Java 17+, Maven and (for the nightly stage)
-// JMeter on the PATH. It needs no Docker and only core pipeline plugins: Pipeline, Git, JUnit,
+// Runs on a plain Jenkins agent with Python 3.12, Java 17+, Maven and JMeter on the PATH. It needs no Docker and only core pipeline plugins: Pipeline, Git, JUnit,
 // Timestamper. Create it as a "Pipeline" job with "Pipeline script from SCM" pointing at this
 // repository; see docs/10_jenkins_setup.md.
 pipeline {
@@ -93,17 +92,15 @@ pipeline {
       }
     }
 
-    stage('Performance (nightly)') {
-      when { triggeredBy 'TimerTrigger' }
+    stage('Performance') {
+      // Short load test on every build; the nightly timer run is longer and heavier.
       steps {
-        sh '''
-          PORT=5012 "$PY" -m app.server > reports/perf-sut.log 2>&1 &
-          SUT_PID=$!
-          trap 'kill $SUT_PID 2>/dev/null || true' EXIT
-          for _ in $(seq 1 20); do curl -sf http://localhost:5012/health > /dev/null && break; sleep 1; done
-          rm -rf reports/perf-html reports/perf.jtl
-          jmeter -n -t performance/submissions_load_test.jmx -Jhost=localhost -Jport=5012 -Jusers=20 -Jramp=5 -Jduration=30 -l reports/perf.jtl -e -o reports/perf-html
-        '''
+        script {
+          def nightly = currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause').size() > 0
+          withEnv(nightly ? ['USERS=50', 'RAMP=30', 'DURATION=120'] : ['USERS=20', 'RAMP=5', 'DURATION=30']) {
+            sh 'performance/run.sh'
+          }
+        }
       }
     }
   }
