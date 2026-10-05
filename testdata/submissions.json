@@ -1,0 +1,27 @@
+{
+  "clean_paper": {
+    "title": "Photosynthesis in C4 plants",
+    "author": "Ada Lovelace",
+    "text": "C4 plants concentrate carbon dioxide around rubisco using a specialised leaf anatomy, which reduces photorespiration in hot and dry climates."
+  },
+  "plagiarised_paper": {
+    "title": "Cell energy",
+    "author": "Charles Babbage",
+    "text": "The mitochondria is the powerhouse of the cell and produces energy through respiration"
+  },
+  "partial_overlap_paper": {
+    "title": "Hamlet reflection",
+    "author": "Mary Shelley",
+    "text": "To be or not to be that is the question whether tis nobler in the mind to suffer, and in my own words I think this means choosing courage."
+  },
+  "invalid_missing_title": {
+    "title": "",
+    "author": "No Title",
+    "text": "This body is long enough to pass the length validation rule."
+  },
+  "invalid_short_text": {
+    "title": "Too short",
+    "author": "Brevity",
+    "text": "tiny"
+  }
+}

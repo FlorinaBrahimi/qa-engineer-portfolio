@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  IAM role that GitHub Actions assumes via OIDC to deploy the Submission Service.
+  No long-lived AWS keys are stored in GitHub. Deploy once per account.
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: GitHub user or organisation that owns the repo
+  GitHubRepo:
+    Type: String
+    Description: Repository name
+  StackName:
+    Type: String
+    Default: submission-service
+    Description: Name of the application stack the role may manage
+
+Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+      ThumbprintList: [6938fd4d98bab03faadb97b34396831e3780aea1]
+
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${StackName}-github-deploy"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Federated: !Ref GitHubOidcProvider }
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrg}/${GitHubRepo}:*"
+      Policies:
+        - PolicyName: deploy-submission-service
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [cloudformation:*]
+                Resource: !Sub "arn:aws:cloudformation:*:${AWS::AccountId}:stack/${StackName}/*"
+              - Effect: Allow
+                Action: [s3:CreateBucket, s3:PutObject, s3:GetObject, s3:ListBucket, s3:PutBucketVersioning, s3:GetBucketLocation]
+                Resource:
+                  - !Sub "arn:aws:s3:::${StackName}-artifacts-${AWS::AccountId}"
+                  - !Sub "arn:aws:s3:::${StackName}-artifacts-${AWS::AccountId}/*"
+              - Effect: Allow
+                Action: [lambda:*, dynamodb:*, logs:*, cloudwatch:*]
+                Resource: "*"
+              - Effect: Allow
+                Action: [iam:CreateRole, iam:DeleteRole, iam:GetRole, iam:PassRole, iam:AttachRolePolicy, iam:DetachRolePolicy, iam:PutRolePolicy, iam:DeleteRolePolicy, iam:TagRole]
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/${StackName}-*"
+
+Outputs:
+  DeployRoleArn:
+    Description: Put this in the GitHub secret AWS_DEPLOY_ROLE_ARN
+    Value: !GetAtt DeployRole.Arn

@@ -1,0 +1,24 @@
+# docker compose up --build --abort-on-container-exit --exit-code-from tests
+services:
+  app:
+    build: .
+    command: python -m app.server
+    environment:
+      PORT: "5001"
+      SUBMISSION_API_KEY: qa-demo-key
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 2s
+      retries: 15
+
+  tests:
+    build: .
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://app:5001
+      SUBMISSION_API_KEY: qa-demo-key
+    command: pytest -m "not scale" --junitxml=reports/docker.xml
+    volumes:
+      - ./reports:/work/reports

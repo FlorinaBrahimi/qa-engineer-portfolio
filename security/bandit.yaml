@@ -1,0 +1,3 @@
+# bandit configuration: scan the application code, not the tests.
+exclude_dirs: ["tests", "java-api-tests", "build", "reports", "ai_testing"]
+skips: []

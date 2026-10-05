@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+reports/
+!reports/.gitkeep
+java-api-tests/target/
+.venv/
+.env
+ai_testing/generated/
+!.env.example
+build/

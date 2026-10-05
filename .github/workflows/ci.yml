@@ -1,0 +1,101 @@
+name: Continuous Testing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 2 * * *"   # nightly full run incl. scale tests
+
+jobs:
+  python-suites:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - { name: smoke, marker: "smoke" }
+          - { name: api, marker: "api or security or aws" }
+          - { name: ui, marker: "ui or a11y or mobile" }
+          - { name: integration, marker: "integration or scale" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m playwright install --with-deps chromium
+      - name: Run ${{ matrix.suite.name }} suite
+        run: pytest -m "${{ matrix.suite.marker }}" --junitxml=reports/${{ matrix.suite.name }}.xml --html=reports/${{ matrix.suite.name }}.html --self-contained-html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-${{ matrix.suite.name }}
+          path: reports/
+
+  java-api-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17", cache: maven }
+      - run: pip install flask
+      - name: Start system under test
+        run: |
+          python -m app.server &
+          for _ in $(seq 1 20); do curl -sf localhost:5001/health && break; sleep 1; done
+      - run: mvn -B clean test -Dbase.url=http://localhost:5001
+        working-directory: java-api-tests
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-reports
+          path: java-api-tests/target/surefire-reports/
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up --build --abort-on-container-exit --exit-code-from tests
+
+  security-scans:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install pip-audit bandit
+      - name: Dependency vulnerabilities (pip-audit)
+        run: pip-audit -r requirements.txt
+      - name: Static analysis (bandit, fails on high severity)
+        run: bandit -c security/bandit.yaml -r app aws -lll
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Workflow lint (actionlint)
+        uses: raven-actions/actionlint@v2
+
+  unit-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - run: python -m playwright install --with-deps chromium
+      - name: Whole-suite coverage
+        run: pytest -m "not scale" --cov=app --cov=aws --cov-report=term --cov-report=xml:reports/coverage.xml --cov-fail-under=80
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: coverage, path: reports/coverage.xml }
+
+  predictive-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python ai_testing/predict_flaky.py ai_testing/test_history.csv --out reports/flakiness.md
+      - run: cat reports/flakiness.md >> "$GITHUB_STEP_SUMMARY"

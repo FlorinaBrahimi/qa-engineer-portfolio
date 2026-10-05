@@ -1,0 +1,64 @@
+{
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "in": "header",
+        "name": "X-API-Key",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "title": "Submission Service",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/submissions": {
+      "get": {
+        "responses": {
+          "200": {},
+          "401": {}
+        },
+        "summary": "List submissions"
+      },
+      "post": {
+        "requestBody": {
+          "constraints": {
+            "text": "20-20000 chars",
+            "title": "1-200 chars"
+          },
+          "required": [
+            "title",
+            "author",
+            "text"
+          ]
+        },
+        "responses": {
+          "201": {},
+          "400": {},
+          "401": {}
+        },
+        "summary": "Create submission"
+      }
+    },
+    "/api/submissions/{id}": {
+      "delete": {
+        "responses": {
+          "204": {},
+          "401": {},
+          "404": {}
+        },
+        "summary": "Delete submission"
+      },
+      "get": {
+        "responses": {
+          "200": {},
+          "401": {},
+          "404": {}
+        },
+        "summary": "Get submission"
+      }
+    }
+  }
+}

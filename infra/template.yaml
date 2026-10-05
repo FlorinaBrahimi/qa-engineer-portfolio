@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Submission Service demo: Flask on Lambda behind a Function URL, DynamoDB storage,
+  CloudWatch logs, metric and alarm. Sized for the free tier.
+
+Parameters:
+  ArtifactBucket:
+    Type: String
+    Description: S3 bucket holding the Lambda zip (created by infra/deploy.sh)
+  ArtifactKey:
+    Type: String
+    Description: S3 key of the Lambda zip
+  ApiKey:
+    Type: String
+    NoEcho: true
+    Default: qa-demo-key
+    Description: Value clients must send in X-API-Key
+  LogRetentionDays:
+    Type: Number
+    Default: 7
+
+Resources:
+  SubmissionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-submissions"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  AppLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-app"
+      RetentionInDays: !Ref LogRetentionDays
+
+  AppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: app-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:DeleteItem, dynamodb:Scan]
+                Resource: !GetAtt SubmissionsTable.Arn
+              - Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: "*"
+
+  AppFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: AppLogGroup
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-app"
+      Runtime: python3.12
+      Handler: aws.app_handler.handler
+      Role: !GetAtt AppRole.Arn
+      MemorySize: 512
+      Timeout: 15
+      Code:
+        S3Bucket: !Ref ArtifactBucket
+        S3Key: !Ref ArtifactKey
+      Environment:
+        Variables:
+          STORAGE_BACKEND: dynamodb
+          SUBMISSIONS_TABLE: !Ref SubmissionsTable
+          SUBMISSION_API_KEY: !Ref ApiKey
+
+  AppFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt AppFunction.Arn
+      AuthType: NONE
+
+  # A public Function URL needs BOTH statements; with only InvokeFunctionUrl it returns 403.
+  AppFunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AppFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
+
+  AppFunctionUrlInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AppFunction
+      Action: lambda:InvokeFunction
+      Principal: "*"
+      InvokedViaFunctionUrl: true
+
+  ErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-lambda-errors"
+      AlarmDescription: Any Lambda invocation error in a 5 minute window
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref AppFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  AppUrl:
+    Description: Base URL of the deployed Submission Service (use as BASE_URL for tests)
+    Value: !GetAtt AppFunctionUrl.FunctionUrl
+  TableName:
+    Value: !Ref SubmissionsTable
+  FunctionName:
+    Value: !Ref AppFunction

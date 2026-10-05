@@ -1,0 +1,3 @@
+# Only what the Lambda package needs. boto3 is provided by the runtime.
+flask>=3.0
+apig-wsgi>=2.18

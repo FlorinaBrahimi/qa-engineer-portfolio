@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Submission Service</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/" aria-label="Submission Service home">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        Submission Service
+      </a>
+      <span class="env-badge">{{ backend_label }} · QA demo</span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Check a paper for similarity</h1>
+      <p>Submit a title, author and paper text. The service compares the text against a reference corpus and returns a similarity score with a status you can act on.</p>
+    </div>
+  </section>
+
+  <main class="page">
+    <section class="card" aria-labelledby="form-heading">
+      <h2 id="form-heading">New submission</h2>
+      <p class="lede">All fields are required. The text must be at least {{ min_text_length }} characters.</p>
+
+      <form id="submission-form" method="post" action="/submit" novalidate>
+        <div class="field">
+          <label for="title">Title</label>
+          <input id="title" name="title" type="text" value="{{ form.get('title', '') }}" aria-describedby="title-error" autocomplete="off">
+          <span id="title-error" class="error" data-testid="error-title">{{ errors.get('title', '') }}</span>
+        </div>
+
+        <div class="field">
+          <label for="author">Author</label>
+          <input id="author" name="author" type="text" value="{{ form.get('author', '') }}" aria-describedby="author-error" autocomplete="off">
+          <span id="author-error" class="error" data-testid="error-author">{{ errors.get('author', '') }}</span>
+        </div>
+
+        <div class="field">
+          <label for="text">Paper text</label>
+          <textarea id="text" name="text" rows="7" aria-describedby="text-error text-hint">{{ form.get('text', '') }}</textarea>
+          <div class="hint" id="text-hint"><span>Paste the body of the paper.</span><span id="char-count" data-min="{{ min_text_length }}"></span></div>
+          <span id="text-error" class="error" data-testid="error-text">{{ errors.get('text', '') }}</span>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn" data-testid="submit-button">Check similarity</button>
+          <span class="note">Results appear in the submissions list below.</span>
+        </div>
+      </form>
+    </section>
+
+    <aside class="card" aria-labelledby="stats-heading">
+      <h2 id="stats-heading">Overview</h2>
+      <p class="lede">Across every submission in this environment.</p>
+      <div class="stats" data-testid="stats">
+        <div class="stat"><span class="value" data-testid="stat-total">{{ stats.total }}</span><span class="label">Submissions</span></div>
+        <div class="stat"><span class="value" data-testid="stat-flagged">{{ stats.flagged }}</span><span class="label">Flagged</span></div>
+        <div class="stat"><span class="value" data-testid="stat-average">{{ stats.average }}%</span><span class="label">Avg similarity</span></div>
+      </div>
+      <ul class="legend" aria-label="Similarity bands">
+        <li><span class="swatch band-blue"></span>0% · no matching text</li>
+        <li><span class="swatch band-green"></span>1–24% · low, status clear</li>
+        <li><span class="swatch band-yellow"></span>25–49% · flagged for review</li>
+        <li><span class="swatch band-orange"></span>50–74% · flagged, likely overlap</li>
+        <li><span class="swatch band-red"></span>75–100% · flagged, substantial overlap</li>
+      </ul>
+    </aside>
+
+    <section class="card span-2" aria-labelledby="list-heading">
+      <h2 id="list-heading">Submissions</h2>
+      <p class="lede">Most recent first.</p>
+      <div class="table-wrap">
+        <table data-testid="submissions-table">
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">Author</th>
+              <th scope="col">Words</th>
+              <th scope="col">Similarity</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in items %}
+            <tr data-testid="submission-row" data-id="{{ s.id }}">
+              <td class="title">{{ s.title }}</td>
+              <td>{{ s.author }}</td>
+              <td class="num">{{ s.word_count }}</td>
+              <td class="num"><span class="score band-{{ s.similarity_score | band }}" data-testid="score">{{ s.similarity_score }}%</span></td>
+              <td><span class="pill {{ s.status }}">{{ s.status }}</span></td>
+            </tr>
+            {% else %}
+            <tr data-testid="empty-row"><td colspan="5" class="empty">No submissions yet. Use the form above to check your first paper.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Demo system under test for a QA engineering portfolio. Not affiliated with any commercial integrity product.
+  </footer>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

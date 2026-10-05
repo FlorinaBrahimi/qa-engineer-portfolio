@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Submission",
+  "type": "object",
+  "required": ["id", "title", "author", "word_count", "similarity_score", "status", "created_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[0-9a-f-]{36}$" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "author": { "type": "string", "minLength": 1 },
+    "word_count": { "type": "integer", "minimum": 0 },
+    "similarity_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "status": { "type": "string", "enum": ["clear", "flagged"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}

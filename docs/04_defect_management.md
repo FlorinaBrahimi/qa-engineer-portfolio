@@ -1,0 +1,87 @@
+# Defect Management
+
+## Lifecycle
+
+```
+New -> Triaged -> In progress -> Ready for verification -> Verified -> Closed
+                      \-> Won't fix / Duplicate / Cannot reproduce (with reason)
+```
+
+Triage happens daily, 10 minutes, with QE, dev lead and PM. QE proposes severity; the group sets priority.
+
+## Severity vs priority
+
+| Severity | Definition | Example |
+|---|---|---|
+| S1 Critical | Data loss, security breach, no workaround, blocks release | Submissions silently dropped under load |
+| S2 Major | Core flow broken for many users, workaround is painful | Flagged status wrong for texts with Unicode quotes |
+| S3 Minor | Non-core feature wrong, workaround exists | Error message typo |
+| S4 Trivial | Cosmetic | Table misaligned by 2px |
+
+Priority (P1 fix now, P2 this sprint, P3 backlog) is a business decision and can differ from severity.
+
+## Report template
+
+```
+Title:        <component>: <one-line symptom>
+Environment:  <in-process | docker | staging>, build <sha>, browser/OS if UI
+Severity:     S1-S4         Priority: P1-P3
+Found by:     <test id or exploratory charter>
+Preconditions:
+Steps to reproduce:
+  1.
+  2.
+Expected:
+Actual:
+Evidence:     logs / screenshot / HAR / failing test name
+Workaround:
+Notes:        suspected cause, related tickets
+```
+
+## Sample defects from this project
+
+### DEF-101 (S2 / P1) API: concurrent POSTs occasionally return duplicate ids
+
+- **Environment:** in-process, commit before `_lock` was introduced in `app/server.py`
+- **Found by:** TC-SCALE-001
+- **Steps:** run `pytest -m scale` five times.
+- **Expected:** 100 unique ids each run. **Actual:** 1 run in 5 produced 99 unique ids.
+- **Evidence:** failing assertion `duplicate IDs under concurrency`, CI build 118.
+- **Resolution:** store writes wrapped in a lock; regression test retained. Verified in build 121, closed.
+
+### DEF-102 (S3 / P2) UI: validation error for `text` is not announced to screen readers
+
+- **Environment:** docker, Chrome 129 + VoiceOver
+- **Found by:** EXP-002 exploratory session
+- **Steps:** submit the form with 5-character text using keyboard only.
+- **Expected:** error is read out when focus returns to the field. **Actual:** silent.
+- **Resolution:** `aria-describedby` added linking each input to its error span; TC-A11Y-002 extended. Verified, closed.
+
+### DEF-104 (S3 / P2) API: responses advertise server stack in the `Server` header
+
+- **Environment:** in-process and Docker (Werkzeug dev server); not reproducible on Lambda
+- **Found by:** `SecurityTest.errorsDoNotLeakInternals` (Java suite), first run after adding leakage checks
+- **Steps:** `curl -I http://localhost:5001/health`
+- **Expected:** no technology disclosure. **Actual:** `Server: Werkzeug/3.1 Python/3.12`
+- **Resolution:** `Server` header overridden in the app's `after_request` hook so every environment behaves the same. Verified by the Java and Python security suites, closed.
+
+### DEF-106 (S2 / P1) API: wrongly typed field crashes with HTTP 500
+
+- **Environment:** all
+- **Found by:** `test_wrongly_typed_field_is_rejected_naming_field`, written by the AI test generator and absent from both hand-written suites
+- **Steps:** POST `/api/submissions` with `"title": 123`, `"author": {}` or `"text": []`.
+- **Expected:** 400 naming the field. **Actual:** 500, unhandled `AttributeError` on `.strip()`.
+- **Resolution:** validation now rejects non-string values with `<field> must be a string`. The generated tests were reviewed and promoted into `tests/api/test_generated_api.py`. Verified locally and live, closed.
+
+### DEF-105 (S3 / P2) UI: "flagged" status pill fails WCAG AA colour contrast
+
+- **Environment:** live AWS stack only at first; local and CI runs passed
+- **Found by:** `test_axe_core_reports_no_serious_violations` run against the deployed URL
+- **Expected:** contrast of at least 4.5:1. **Actual:** 4.13:1 (`#e4123f` on `#fdecef`).
+- **Root cause of the escape:** the scan ran on an empty table locally, so the pill was never rendered. The live table had data.
+- **Resolution:** pill text darkened to `#a30d2d` (7.0:1). The test now seeds a clear and a flagged row before scanning, so the gap is closed in every environment. Verified locally and live, closed.
+
+### DEF-103 (S4 / P3) UI: status cell colour alone distinguishes flagged from clear
+
+- **Found by:** axe review (colour is not the only cue once text is present, so downgraded to S4).
+- **Status:** Won't fix for v1.1; the status word is present as text, which satisfies WCAG 1.4.1. Logged for design review.
