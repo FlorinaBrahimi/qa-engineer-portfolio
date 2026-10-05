@@ -25,13 +25,19 @@ Test results appear as CodeBuild test reports, so each build shows pass and fail
 ## Set up
 
 ```bash
-# Create and authorise a GitHub connection named qa-engineer-portfolio in the AWS console
-# (Developer Tools > Settings > Connections). The browser approval cannot be scripted.
-make aws-pipeline-connection   # confirms the connection is AVAILABLE
+make aws-pipeline-connection   # creates the GitHub connection (PENDING) and prints the console link
+# In the console: open the pending connection, "Update pending connection", "Install a new app",
+# grant it the repository, then "Connect". This browser step cannot be scripted.
 make aws-pipeline              # stores an API key and creates the pipeline
 make aws-pipeline-status       # stage-by-stage status of the latest run
 infra/pipeline-setup.sh destroy   # remove everything this created
 ```
+
+**Install the app, do not only authorise it.** A connection can reach AVAILABLE without the
+AWS Connector for GitHub app being installed on the repository. The pipeline can then still
+read a public repository, so the first run passes, but GitHub sends it no push events and
+later pushes never start a run. Check https://github.com/settings/installations lists
+"AWS Connector for GitHub" with access to the repository.
 
 The IAM user running these needs the permissions in `infra/pipeline-user-policy.json`, plus
 the AWS-managed CodeBuild and CodePipeline policies.
