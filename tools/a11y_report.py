@@ -135,6 +135,17 @@ def _reflow_checks(browser, base_url: str) -> list[dict]:
 TEXT_SPACING_CSS = "* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }"
 
 
+def _wait_focused(page, selector: str) -> None:
+    """The script that moves focus loads after the markup, so give it a moment. A real
+    failure still shows up: the check that follows reads the focused element itself."""
+    from playwright.sync_api import expect
+
+    try:
+        expect(page.locator(selector)).to_be_focused(timeout=3000)
+    except AssertionError:
+        pass
+
+
 def _announcement_checks(page) -> list[dict]:
     """Outcome of a submission must reach assistive technology without the user hunting for it."""
     page.goto("/")
@@ -146,6 +157,7 @@ def _announcement_checks(page) -> list[dict]:
     page.goto("/")
     _submit(page, {"title": "", "author": "", "text": "short"})
     page.wait_for_selector("#error-summary")
+    _wait_focused(page, "#error-summary")
     err = page.evaluate(
         """() => { const e = document.getElementById('error-summary');
              return {focused: document.activeElement === e, role: e.getAttribute('role'),
@@ -158,6 +170,7 @@ def _announcement_checks(page) -> list[dict]:
     page.goto("/")
     _submit(page, CLEAN)
     page.wait_for_selector("#status-message")
+    _wait_focused(page, "#status-message")
     ok = page.evaluate(
         "() => { const e = document.getElementById('status-message'); return {focused: document.activeElement === e, role: e.getAttribute('role'), text: e.textContent.trim()}; }"
     )

@@ -1,5 +1,6 @@
 """Accessibility testing: structural checks plus full axe-core WCAG scans."""
 import pytest
+from playwright.sync_api import expect
 from tests.ui.pages.submission_page import SubmissionPage
 
 pytestmark = [pytest.mark.a11y, pytest.mark.ui]
@@ -110,7 +111,7 @@ def test_validation_errors_are_announced_and_linked_to_fields(page):
     summary = page.get_by_test_id("error-summary")
     summary.wait_for()
     assert summary.get_attribute("role") == "alert"
-    assert page.evaluate("document.activeElement.id") == "error-summary"
+    expect(summary).to_be_focused()   # waits: the focus script loads after the markup
     assert page.title().startswith("Error:")
     for field in ("title", "author", "text"):
         assert page.locator(f"#{field}").get_attribute("aria-invalid") == "true"
@@ -135,7 +136,7 @@ def test_successful_submission_is_confirmed_in_a_focused_status_message(page, cl
     status.wait_for()
     assert status.get_attribute("role") == "status"
     assert "scored 100.0% similarity and is flagged" in status.inner_text()
-    assert page.evaluate("document.activeElement.id") == "status-message"
+    expect(status).to_be_focused()
 
 
 def test_accessibility_statement_is_linked_and_passes_axe(page):
