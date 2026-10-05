@@ -254,9 +254,20 @@ def create_submission():
     return jsonify(submission), 201
 
 
+def _valid_id(submission_id: str) -> bool:
+    """Ids are server-issued UUIDs. Anything else cannot exist, so it never reaches storage.
+    Without this, an over-long id made DynamoDB raise and the API answered 500 (DEF-115)."""
+    try:
+        return str(uuid.UUID(submission_id)) == submission_id.lower()
+    except ValueError:
+        return False
+
+
 @app.get("/api/submissions/<submission_id>")
 @require_api_key
 def get_submission(submission_id: str):
+    if not _valid_id(submission_id):
+        return jsonify({"error": "not_found"}), 404
     submission = store.get(submission_id)
     if submission is None:
         return jsonify({"error": "not_found"}), 404
@@ -266,7 +277,7 @@ def get_submission(submission_id: str):
 @app.delete("/api/submissions/<submission_id>")
 @require_api_key
 def delete_submission(submission_id: str):
-    if not store.delete(submission_id):
+    if not _valid_id(submission_id) or not store.delete(submission_id):
         return jsonify({"error": "not_found"}), 404
     return "", 204
 
@@ -275,7 +286,8 @@ def delete_submission(submission_id: str):
 def index():
     # After a successful form post we redirect here with ?added=<id> so the page can confirm
     # the result in a status message that assistive technology announces (WCAG 4.1.3).
-    added = store.get(request.args.get("added", "")) if request.args.get("added") else None
+    added_id = request.args.get("added", "")
+    added = store.get(added_id) if _valid_id(added_id) else None
     return render_template("index.html", **page_context(store.list()), added=added)
 
 

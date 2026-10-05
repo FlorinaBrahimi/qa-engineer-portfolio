@@ -60,7 +60,10 @@ jobs:
           path: reports/
 
   post-deploy-java-aws:
-    needs: deploy
+    # Runs after the Python job, not beside it: both use the one live table, and the Python
+    # suite clears it between tests, which made a Java read fail when they overlapped.
+    needs: [deploy, post-deploy-tests]
+    if: ${{ always() && needs.deploy.result == 'success' }}
     runs-on: ubuntu-latest
     environment: aws-demo
     steps:

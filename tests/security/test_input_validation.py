@@ -49,9 +49,21 @@ def test_template_expressions_are_not_evaluated(api, base_url):
 
 @pytest.mark.parametrize("bad_id", ["../../etc/passwd", "..%2f..%2fetc%2fpasswd", "%00", "' OR '1'='1", "<script>", "a" * 5000])
 def test_hostile_object_ids_return_404_not_an_error(api, base_url, bad_id):
-    resp = api.get(f"{base_url}/api/submissions/{bad_id}")
-    assert resp.status_code in (404, 400, 414)
-    assert "Traceback" not in resp.text
+    for method in ("get", "delete"):
+        resp = getattr(api, method)(f"{base_url}/api/submissions/{bad_id}")
+        assert resp.status_code in (404, 400, 414), f"{method} gave {resp.status_code}"
+        assert "Traceback" not in resp.text
+
+
+def test_only_well_formed_uuids_reach_storage(client, monkeypatch):
+    """Ids that cannot be valid are answered without a storage call (found live: DEF-115)."""
+    from app import server
+
+    calls = []
+    monkeypatch.setattr(server.store, "get", lambda i: calls.append(i))
+    for bad in ("x", "a" * 5000, "123", "not-a-uuid", "00000000-0000-0000-0000-00000000000g"):
+        assert client.get(f"/api/submissions/{bad}", headers={"X-API-Key": server.API_KEY}).status_code == 404
+    assert calls == []
 
 
 @pytest.mark.parametrize("content_type", ["text/plain", "application/xml", "application/x-www-form-urlencoded", "multipart/form-data"])

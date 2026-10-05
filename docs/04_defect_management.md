@@ -65,6 +65,15 @@ Notes:        suspected cause, related tickets
 - **Expected:** no technology disclosure. **Actual:** `Server: Werkzeug/3.1 Python/3.12`
 - **Resolution:** `Server` header overridden in the app's `after_request` hook so every environment behaves the same. Verified by the Java and Python security suites, closed.
 
+### DEF-115 (S2 / P1) API: over-long object id returns HTTP 500 on AWS
+
+- **Environment:** live AWS only. Local runs passed.
+- **Found by:** `test_hostile_object_ids_return_404_not_an_error` in the post-deploy pipeline
+- **Steps:** GET `/api/submissions/` followed by 5,000 characters.
+- **Expected:** 404. **Actual:** 500. DynamoDB rejects keys over 2,048 bytes; the in-memory store used locally has no such limit.
+- **Resolution:** ids are validated as UUIDs before any storage call, so a malformed id cannot reach the database. A unit test asserts storage is never called. Verified locally and live, closed.
+- **Lesson:** the third defect in this project that only appeared against the real cloud backend, which is the argument for running the suite post-deploy.
+
 ### DEF-109 (S2 / P1) API: author field has no maximum length
 
 - **Found by:** security review against OWASP API4:2023 (Unrestricted Resource Consumption)
