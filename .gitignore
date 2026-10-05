@@ -9,3 +9,4 @@ java-api-tests/target/
 ai_testing/generated/
 !.env.example
 build/
+interview_notes.md
