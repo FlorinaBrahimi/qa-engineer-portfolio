@@ -11,7 +11,7 @@ REGION="${AWS_REGION:-eu-west-2}"
 PIPELINE_STACK="submission-service-pipeline"
 TARGET_STACK="submission-service-aws-ci"
 PARAM="/${TARGET_STACK}/api-key"
-CONN_NAME="qa-portfolio-github"
+CONN_NAME="${CONNECTION_NAME:-qa-engineer-portfolio}"   # the connection created in the AWS console
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 conn_arn() { aws codeconnections list-connections --region "$REGION" --query "Connections[?ConnectionName=='${CONN_NAME}'].ConnectionArn | [0]" --output text; }

@@ -25,8 +25,9 @@ Test results appear as CodeBuild test reports, so each build shows pass and fail
 ## Set up
 
 ```bash
-make aws-pipeline-connection   # creates the GitHub connection and prints the console link
-# authorise the connection in the AWS console (one-off browser step, cannot be scripted)
+# Create and authorise a GitHub connection named qa-engineer-portfolio in the AWS console
+# (Developer Tools > Settings > Connections). The browser approval cannot be scripted.
+make aws-pipeline-connection   # confirms the connection is AVAILABLE
 make aws-pipeline              # stores an API key and creates the pipeline
 make aws-pipeline-status       # stage-by-stage status of the latest run
 infra/pipeline-setup.sh destroy   # remove everything this created
