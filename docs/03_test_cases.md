@@ -33,13 +33,16 @@ Each case maps to an automated test where one exists. Manual-only cases are mark
 
 ## Security
 
-| ID | Title | Expected | Automated in |
-|---|---|---|---|
-| TC-SEC-001 | All API endpoints require key | 401 with error body | `test_endpoints_reject_missing_api_key` |
-| TC-SEC-002 | Wrong key rejected | 401 | `test_wrong_api_key_is_rejected` |
-| TC-SEC-003 | Hardening headers present | nosniff, DENY, CSP, no-referrer | `test_hardening_headers_present` |
-| TC-SEC-004 | Injection payloads stored verbatim | No 500, title round-trips | `test_injection_payloads_are_stored_verbatim_not_executed` |
-| TC-SEC-005 | Script in title escaped in UI | No JS executes, escaped in HTML | `test_script_in_title_is_escaped_in_ui` |
+Mapped to standards in [12_security.md](12_security.md). 137 cases across six files.
+
+| File | Standard | Cases | Covers |
+|---|---|---:|---|
+| `test_owasp_api_top10.py` | OWASP API Security Top 10 (2023) | 64 | Authentication, object ids, mass assignment, resource limits, hidden endpoints, misconfiguration, inventory |
+| `test_secure_headers.py` | OWASP Secure Headers Project | 14 | Required headers on every response type, CSP content, caching, no cookies |
+| `test_input_validation.py` | ASVS V5, Top 10 Injection | 44 | Fifteen hostile payload classes, hostile ids, media types, malformed JSON, type confusion, stored and reflected XSS, CSP |
+| `test_browser_defences.py` | ASVS V4.2, V14.4 | 5 | Cross-site form posts, clickjacking |
+| `test_logging_and_monitoring.py` | ASVS V7 | 4 | Security events logged; keys and content never logged |
+| `test_transport_live.py` | ASVS V9 | 5 | TLS versions, certificate, no plain HTTP, HSTS. Live deployment only |
 
 ## Accessibility, scale, mobile, AWS
 

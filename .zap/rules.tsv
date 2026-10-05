@@ -1,0 +1,15 @@
+# OWASP ZAP baseline rule overrides. Columns: rule id, action (IGNORE, WARN, FAIL), reason.
+# Everything not listed keeps ZAP's default. Any FAIL breaks the build.
+10038	FAIL	Content Security Policy header must be present
+10020	FAIL	Anti-clickjacking header must be present
+10021	FAIL	X-Content-Type-Options must be present
+10035	IGNORE	HSTS is checked by pytest; this scan runs over plain HTTP inside CI where browsers ignore it
+10036	FAIL	Server header must not leak version information
+10037	FAIL	X-Powered-By must not be present
+10063	FAIL	Permissions-Policy must be present
+10098	FAIL	No cross-domain misconfiguration (CORS)
+40012	FAIL	Reflected cross-site scripting
+40014	FAIL	Persistent cross-site scripting
+10202	IGNORE	Anti-CSRF tokens: the form is protected with Fetch Metadata (Sec-Fetch-Site) and has no session to ride; covered by tests/security/test_browser_defences.py
+10049	IGNORE	Storable and cacheable content: informational; static assets are intentionally cacheable
+10109	IGNORE	Modern web application: informational

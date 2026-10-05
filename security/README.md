@@ -1,22 +1,14 @@
-# Security testing
+# Security tooling
 
-Three layers, all automated:
+Standards mapping, coverage and known gaps are in [docs/12_security.md](../docs/12_security.md).
 
-| Layer | Tool | What it catches | Run |
-|---|---|---|---|
-| Behavioural | `tests/security/` (pytest) and `SecurityTest.java` | Missing auth, missing hardening headers, injection and XSS handling, information leakage | `pytest -m security` |
-| Dependencies | [pip-audit](https://github.com/pypa/pip-audit) | Known CVEs in the Python packages the app and tests depend on | `make audit` |
-| Static analysis | [bandit](https://bandit.readthedocs.io) | Insecure code patterns in the app (hard-coded secrets, unsafe calls, debug mode) | `make audit` |
+| Layer | Tool | Run locally |
+|---|---|---|
+| Security regression tests | pytest, REST Assured | `pytest -m security`, `make java` |
+| SAST | bandit | `make audit` |
+| SCA | pip-audit | `make audit` |
+| Secret scanning | gitleaks | `make audit` (needs `brew install gitleaks`) |
+| IaC lint | cfn-lint | `make audit` |
+| DAST | OWASP ZAP baseline | GitHub Actions job `dynamic-scan`; report in the `zap-report` artifact. Needs Docker to run locally |
 
-Both scans run in CI (`security-scans` job) and fail the build on high-severity findings.
-Reports land in `reports/pip-audit.json` and `reports/bandit.json`.
-
-## Dynamic scanning (nightly, not in this repo's CI)
-
-For a deployed environment run an OWASP ZAP baseline scan against the live URL:
-
-```bash
-docker run --rm -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t "$BASE_URL" -r zap-report.html
-```
-
-ZAP needs Docker, which is why it is a nightly Jenkins stage rather than a PR check.
+`.zap/rules.tsv` decides which ZAP alerts fail the build and records why any are ignored.

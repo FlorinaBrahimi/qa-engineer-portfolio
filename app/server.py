@@ -20,22 +20,41 @@ STORAGE_BACKEND=dynamodb.
 """
 from __future__ import annotations
 
+import hmac
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
+from urllib.parse import urlparse
 
 from flask import Flask, jsonify, redirect, render_template, request, url_for
+from werkzeug.exceptions import HTTPException
+from werkzeug.serving import WSGIRequestHandler
 
 from app.similarity import similarity_band, similarity_score, word_count
 from app.storage import build_store
 
-API_KEY = os.environ.get("SUBMISSION_API_KEY", "qa-demo-key")
+DEFAULT_API_KEY = "qa-demo-key"   # for local, Docker and CI runs only; never valid on AWS
+API_KEY = os.environ.get("SUBMISSION_API_KEY", DEFAULT_API_KEY)
+ON_AWS = bool(os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 MIN_TEXT_LENGTH = 20
 MAX_TEXT_LENGTH = 20_000
+MAX_TITLE_LENGTH = 200
+MAX_AUTHOR_LENGTH = 200
+MAX_BODY_BYTES = 256 * 1024       # largest valid JSON body is about 80 KB; refuse far beyond that
+MAX_PAGE_SIZE = 500
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = MAX_BODY_BYTES
 store = build_store()
+audit_log = logging.getLogger("submission_service.audit")
+
+# The development server adds its own "Server: Werkzeug/x Python/y" header. Replace it at the
+# source so no response discloses the stack (OWASP Secure Headers; first raised as DEF-104).
+WSGIRequestHandler.server_version = "submission-service"
+WSGIRequestHandler.sys_version = ""
+WSGIRequestHandler.version_string = lambda self: "submission-service"
 app.jinja_env.filters["band"] = similarity_band
 
 
@@ -53,22 +72,75 @@ def page_context(items: list[dict], errors: dict | None = None, form: dict | Non
     }
 
 
+CSP = "; ".join([
+    "default-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+
+
 @app.after_request
 def security_headers(response):
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Content-Security-Policy"] = "default-src 'self'"
-    response.headers["Referrer-Policy"] = "no-referrer"
-    # Found by SecurityTest.errorsDoNotLeakInternals (DEF-104): the dev server advertised
-    # "Werkzeug/x Python/y". Overriding here means no environment reveals its stack.
-    response.headers["Server"] = "submission-service"
+    """Headers recommended by the OWASP Secure Headers Project."""
+    h = response.headers
+    h["X-Content-Type-Options"] = "nosniff"
+    h["X-Frame-Options"] = "DENY"
+    h["Content-Security-Policy"] = CSP
+    h["Referrer-Policy"] = "no-referrer"
+    h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    h["Cross-Origin-Opener-Policy"] = "same-origin"
+    h["Cross-Origin-Resource-Policy"] = "same-origin"
+    h["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    # Submissions are personal work. Never let a shared cache or the browser keep API or page
+    # responses; static assets carry no user data and may be cached.
+    if not request.path.startswith("/static/"):
+        h["Cache-Control"] = "no-store"
     return response
+
+
+def _wants_json() -> bool:
+    return request.path.startswith("/api/") or request.path == "/health"
+
+
+@app.errorhandler(HTTPException)
+def http_error(exc: HTTPException):
+    """API clients always get JSON, never a framework HTML page."""
+    if _wants_json():
+        codes = {400: "bad_request", 404: "not_found", 405: "method_not_allowed", 413: "payload_too_large", 415: "unsupported_media_type"}
+        return jsonify({"error": codes.get(exc.code, "error")}), exc.code
+    return exc
+
+
+@app.errorhandler(Exception)
+def unexpected_error(exc: Exception):
+    """Fail safely: log the detail server-side, tell the client nothing about internals."""
+    app.logger.exception("unhandled error on %s %s", request.method, request.path)
+    if _wants_json():
+        return jsonify({"error": "internal_error"}), 500
+    return "Something went wrong.", 500
+
+
+def _client_ip() -> str:
+    return (request.headers.get("X-Forwarded-For", request.remote_addr or "") or "").split(",")[0].strip()
 
 
 def require_api_key(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if request.headers.get("X-API-Key") != API_KEY:
+        supplied = request.headers.get("X-API-Key", "")
+        # A deployment that still has the public default key is misconfigured: refuse everything.
+        misconfigured = ON_AWS and API_KEY == DEFAULT_API_KEY
+        # compare_digest takes the same time whether the first or last character differs,
+        # so response timing cannot be used to guess the key one character at a time.
+        valid = hmac.compare_digest(supplied.encode(), API_KEY.encode()) and not misconfigured
+        if not valid:
+            # Audit trail for failed authentication. The supplied key is never logged.
+            audit_log.warning(
+                "auth_failed method=%s path=%s ip=%s key_supplied=%s",
+                request.method, request.path, _client_ip(), bool(supplied),
+            )
             return jsonify({"error": "unauthorized"}), 401
         return fn(*args, **kwargs)
 
@@ -90,10 +162,12 @@ def validate(payload: dict) -> dict[str, str]:
     text = payload.get("text") or ""
     if not title:
         errors["title"] = "title is required"
-    elif len(title) > 200:
-        errors["title"] = "title must be 200 characters or fewer"
+    elif len(title) > MAX_TITLE_LENGTH:
+        errors["title"] = f"title must be {MAX_TITLE_LENGTH} characters or fewer"
     if not author:
         errors["author"] = "author is required"
+    elif len(author) > MAX_AUTHOR_LENGTH:
+        errors["author"] = f"author must be {MAX_AUTHOR_LENGTH} characters or fewer"
     if len(text.strip()) < MIN_TEXT_LENGTH:
         errors["text"] = f"text must be at least {MIN_TEXT_LENGTH} characters"
     elif len(text) > MAX_TEXT_LENGTH:
@@ -135,6 +209,7 @@ def openapi():
                             "required": ["title", "author", "text"],
                             "constraints": {
                                 "title": "1-200 chars",
+                                "author": "1-200 chars",
                                 "text": f"{MIN_TEXT_LENGTH}-{MAX_TEXT_LENGTH} chars",
                             },
                         },
@@ -153,13 +228,20 @@ def openapi():
 @app.get("/api/submissions")
 @require_api_key
 def list_submissions():
-    items = store.list()
-    return jsonify({"items": items, "count": len(items)})
+    """Bounded listing: a client can never make the service return an unbounded response."""
+    raw = request.args.get("limit", str(MAX_PAGE_SIZE))
+    if not raw.isdigit() or not 1 <= int(raw) <= MAX_PAGE_SIZE:
+        return jsonify({"error": "validation_failed", "fields": {"limit": f"limit must be a whole number from 1 to {MAX_PAGE_SIZE}"}}), 400
+    everything = store.list()
+    items = everything[: int(raw)]
+    return jsonify({"items": items, "count": len(items), "total": len(everything)})
 
 
 @app.post("/api/submissions")
 @require_api_key
 def create_submission():
+    if not request.is_json:
+        return jsonify({"error": "unsupported_media_type"}), 415
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         return jsonify({"error": "body must be a JSON object"}), 400
@@ -196,8 +278,26 @@ def index():
     return render_template("index.html", **page_context(store.list()), added=added)
 
 
+def _same_origin() -> bool:
+    """Refuse form posts that another website triggered (CSRF defence).
+
+    Browsers label every request with Sec-Fetch-Site (Fetch Metadata), which a page cannot
+    forge. "cross-site" means a different site made the browser send this. Older browsers
+    without that header fall back to the Origin check. Origin alone is not enough here: the
+    strict Referrer-Policy makes browsers send "Origin: null" on this site's own form.
+    """
+    site = request.headers.get("Sec-Fetch-Site")
+    if site is not None:
+        return site in ("same-origin", "none")
+    origin = request.headers.get("Origin")
+    return origin in (None, "null") or urlparse(origin).netloc == request.host
+
+
 @app.post("/submit")
 def submit_form():
+    if not _same_origin():
+        audit_log.warning("cross_site_form_post_blocked site=%s origin=%s ip=%s", request.headers.get("Sec-Fetch-Site"), request.headers.get("Origin"), _client_ip())
+        return "Cross-site form submission refused.", 403
     payload = {k: request.form.get(k, "") for k in ("title", "author", "text")}
     errors = validate(payload)
     if errors:

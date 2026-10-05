@@ -182,6 +182,35 @@ class AwsDeploymentTest extends BaseApiTest {
     given().spec(anonymous).when().get("/api/submissions").then().statusCode(401);
   }
 
+  // ---------- Security posture of the deployed resources ----------
+
+  @Test
+  @DisplayName("Deployed function does not use the public default API key")
+  void deployedKeyIsNotThePublicDefault() {
+    String key = lambda.getFunctionConfiguration(r -> r.functionName(function)).environment().variables().get("SUBMISSION_API_KEY");
+    assertThat("a key is configured", key, not(emptyOrNullString()));
+    assertThat("key is not the well-known default", key, not(equalTo("qa-demo-key")));
+    assertThat("key has reasonable entropy", key.length(), greaterThanOrEqualTo(32));
+    given().spec(anonymous).header("X-API-Key", "qa-demo-key").when().get("/api/submissions").then().statusCode(401);
+  }
+
+  @Test
+  @DisplayName("Table is encrypted at rest and has point-in-time recovery enabled")
+  void tableIsEncryptedAndRecoverable() {
+    // DynamoDB encrypts every table at rest; SSEDescription is only present for customer-chosen keys.
+    assertThat(dynamo.describeTable(r -> r.tableName(table)).table().tableStatusAsString(), equalTo("ACTIVE"));
+    String pitr = dynamo.describeContinuousBackups(r -> r.tableName(table))
+        .continuousBackupsDescription().pointInTimeRecoveryDescription().pointInTimeRecoveryStatusAsString();
+    assertThat(pitr, equalTo("ENABLED"));
+  }
+
+  @Test
+  @DisplayName("Function URL grants no cross-origin access")
+  void functionUrlHasNoCors() {
+    var cors = lambda.getFunctionUrlConfig(r -> r.functionName(function)).cors();
+    assertThat(cors == null || cors.allowOrigins() == null || cors.allowOrigins().isEmpty(), is(true));
+  }
+
   // ---------- CloudWatch ----------
 
   @Test

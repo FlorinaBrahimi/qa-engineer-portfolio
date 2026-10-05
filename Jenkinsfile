@@ -66,7 +66,9 @@ pipeline {
           steps {
             sh '''
               "$PY" -m pip_audit -r requirements.txt
-              "$PY" -m bandit -q -c security/bandit.yaml -r app aws -lll
+              "$PY" -m bandit -q -c security/bandit.yaml -r app aws -ll
+              "$PY" -m cfnlint infra/template.yaml infra/github-oidc-role.yaml
+              if command -v gitleaks > /dev/null; then gitleaks detect --source . --no-banner --redact; else echo "gitleaks not installed on this agent; secret scan runs in GitHub Actions"; fi
             '''
           }
         }

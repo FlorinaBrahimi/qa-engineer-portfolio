@@ -29,6 +29,7 @@ class SubmissionsValidationTest extends BaseApiTest {
         Arguments.of("title", "   ", "title is required"),
         Arguments.of("title", "t".repeat(201), "title must be 200 characters or fewer"),
         Arguments.of("author", "", "author is required"),
+        Arguments.of("author", "a".repeat(201), "author must be 200 characters or fewer"),
         Arguments.of("text", "", "text must be at least 20 characters"),
         Arguments.of("text", "nineteen chars long", "text must be at least 20 characters"),
         Arguments.of("text", "x".repeat(20_001), "text must be at most 20000 characters"));

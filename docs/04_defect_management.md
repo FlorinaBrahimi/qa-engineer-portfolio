@@ -65,6 +65,43 @@ Notes:        suspected cause, related tickets
 - **Expected:** no technology disclosure. **Actual:** `Server: Werkzeug/3.1 Python/3.12`
 - **Resolution:** `Server` header overridden in the app's `after_request` hook so every environment behaves the same. Verified by the Java and Python security suites, closed.
 
+### DEF-109 (S2 / P1) API: author field has no maximum length
+
+- **Found by:** security review against OWASP API4:2023 (Unrestricted Resource Consumption)
+- **Steps:** POST a submission whose `author` is 100,000 characters.
+- **Expected:** 400. **Actual:** 201, and the value was stored and returned in every list response.
+- **Resolution:** 200-character maximum, matching `title`. `test_api4_every_text_field_has_an_enforced_maximum` covers all three text fields. Verified, closed.
+
+### DEF-110 (S3 / P2) API: oversized request bodies are read in full
+
+- **Found by:** security review, API4:2023
+- **Steps:** POST a 3 MB JSON body.
+- **Expected:** refused before processing. **Actual:** the whole body was parsed before validation rejected it.
+- **Resolution:** 256 KB request cap, answered with 413 `payload_too_large`. Verified, closed.
+
+### DEF-111 (S3 / P2) API: unknown routes and wrong methods return HTML framework pages
+
+- **Found by:** security review, API8:2023 (Security Misconfiguration)
+- **Expected:** JSON errors with no framework fingerprint. **Actual:** Werkzeug's HTML 404 and 405 pages.
+- **Resolution:** JSON error handlers for API paths, plus a generic 500 handler that logs detail server-side only. Verified, closed.
+
+### DEF-112 (S3 / P2) Several recommended security headers missing; CSP too loose
+
+- **Found by:** comparison with the OWASP Secure Headers Project
+- **Actual:** no HSTS, Permissions-Policy, Cross-Origin-Opener-Policy, Cross-Origin-Resource-Policy or Cache-Control; CSP was only `default-src 'self'`.
+- **Resolution:** all added; CSP now also sets `object-src`, `base-uri`, `form-action` and `frame-ancestors`. Asserted on seven kinds of response, including errors. Verified, closed.
+
+### DEF-113 (S3 / P2) Reopened DEF-104: development server still sent its own Server header
+
+- **Found by:** raw header inspection during the security review
+- **Actual:** two `Server` headers were sent locally, `Werkzeug/3.1.9 Python/3.12.5` and the override. The earlier test read only one of them.
+- **Resolution:** the server's version string is replaced at source, and the test now inspects every header on four paths. Verified, closed.
+
+### DEF-114 (S3 / P2) API key compared with a non-constant-time operator
+
+- **Found by:** code review against ASVS V2 (CWE-208, observable timing discrepancy)
+- **Resolution:** `hmac.compare_digest`. A test guards against regression. Verified, closed.
+
 ### DEF-108 (S4 / P3) UI: footer link target is smaller than 24 px
 
 - **Found by:** the audit's target-size check, minutes after the accessibility statement link was added

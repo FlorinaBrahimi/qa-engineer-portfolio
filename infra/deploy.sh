@@ -12,6 +12,12 @@ BUILD="$ROOT/build"
 ZIP="$BUILD/lambda.zip"
 KEY="lambda/$(date +%Y%m%d%H%M%S)-$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo local).zip"
 
+if [ -z "${SUBMISSION_API_KEY:-}" ] || [ "${SUBMISSION_API_KEY}" = "qa-demo-key" ]; then
+  echo "Refusing to deploy: set SUBMISSION_API_KEY to a private value first (load .env)." >&2
+  echo "The public default key is rejected by the app when it runs on AWS." >&2
+  exit 1
+fi
+
 echo "==> Packaging"
 rm -rf "$BUILD" && mkdir -p "$BUILD/pkg"
 python3 -m pip install -q -r "$ROOT/infra/requirements-lambda.txt" -t "$BUILD/pkg" --platform manylinux2014_x86_64 --only-binary=:all: --python-version 3.12 --implementation cp
@@ -37,7 +43,7 @@ aws cloudformation deploy \
   --template-file "$ROOT/infra/template.yaml" \
   --capabilities CAPABILITY_IAM \
   --no-fail-on-empty-changeset \
-  --parameter-overrides ArtifactBucket="$BUCKET" ArtifactKey="$KEY" ApiKey="${SUBMISSION_API_KEY:-qa-demo-key}"
+  --parameter-overrides ArtifactBucket="$BUCKET" ArtifactKey="$KEY" ApiKey="${SUBMISSION_API_KEY}"
 
 URL="$(aws cloudformation describe-stacks --region "$REGION" --stack-name "$STACK" \
   --query "Stacks[0].Outputs[?OutputKey=='AppUrl'].OutputValue" --output text)"

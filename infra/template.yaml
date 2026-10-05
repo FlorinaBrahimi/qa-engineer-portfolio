@@ -31,6 +31,9 @@ Resources:
       KeySchema:
         - AttributeName: id
           KeyType: HASH
+      # Continuous backups: restore to any second in the last 35 days.
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
 
   AppLogGroup:
     Type: AWS::Logs::LogGroup

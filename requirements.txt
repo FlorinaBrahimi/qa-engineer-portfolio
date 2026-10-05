@@ -30,3 +30,4 @@ axe-playwright-python>=0.1.4
 # Security scanning
 pip-audit>=2.7
 bandit>=1.7
+cfn-lint>=1.0

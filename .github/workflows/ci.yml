@@ -81,17 +81,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }     # full history, so the secret scan covers every commit
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }
-      - run: pip install pip-audit bandit
-      - name: Dependency vulnerabilities (pip-audit)
+      - run: pip install pip-audit bandit cfn-lint
+      - name: Dependencies with known vulnerabilities (SCA, pip-audit)
         run: pip-audit -r requirements.txt
-      - name: Static analysis (bandit, fails on high severity)
-        run: bandit -c security/bandit.yaml -r app aws -lll
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+      - name: Static analysis of application code (SAST, bandit; fails on medium and above)
+        run: bandit -c security/bandit.yaml -r app aws -ll
+      - name: Infrastructure template lint (IaC, cfn-lint)
+        run: cfn-lint infra/template.yaml infra/github-oidc-role.yaml
+      - name: Secrets in any commit (gitleaks)
+        run: |
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks detect --source . --no-banner --redact
       - name: Workflow lint (actionlint)
         uses: raven-actions/actionlint@v2
+
+  dynamic-scan:
+    # DAST: OWASP ZAP crawls the running app and passively inspects every response.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install flask
+      - name: Start the app with sample data
+        run: |
+          python -m app.server > sut.log 2>&1 &
+          for _ in $(seq 1 20); do curl -sf localhost:5001/health && break; sleep 1; done
+          curl -sf -X POST localhost:5001/api/submissions -H "X-API-Key: qa-demo-key" -H "Content-Type: application/json" \
+            -d '{"title":"ZAP seed","author":"scanner","text":"A seeded submission so the results table has a row to inspect."}'
+      - name: OWASP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: "http://localhost:5001"
+          rules_file_name: ".zap/rules.tsv"
+          allow_issue_writing: false
+          fail_action: true
+          artifact_name: zap-report
 
   unit-coverage:
     runs-on: ubuntu-latest

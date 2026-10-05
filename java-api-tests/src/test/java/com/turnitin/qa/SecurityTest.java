@@ -47,13 +47,55 @@ class SecurityTest extends BaseApiTest {
   @CsvSource({
     "X-Content-Type-Options, nosniff",
     "X-Frame-Options, DENY",
-    "Content-Security-Policy, default-src 'self'",
-    "Referrer-Policy, no-referrer"
+    "Referrer-Policy, no-referrer",
+    "Cross-Origin-Opener-Policy, same-origin",
+    "Cross-Origin-Resource-Policy, same-origin",
+    "Strict-Transport-Security, max-age=63072000; includeSubDomains",
+    "Cache-Control, no-store"
   })
   @DisplayName("Hardening headers are present on every response")
   void hardeningHeadersPresent(String header, String expected) {
     given().spec(anonymous).when().get("/health").then().header(header, equalTo(expected));
     given().spec(anonymous).when().get("/").then().header(header, equalTo(expected));
+  }
+
+  @Test
+  @DisplayName("Content Security Policy forbids framing, plugins and inline script")
+  void contentSecurityPolicyIsRestrictive() {
+    given().spec(anonymous).when().get("/").then()
+        .header("Content-Security-Policy", allOf(
+            containsString("default-src 'self'"), containsString("frame-ancestors 'none'"),
+            containsString("object-src 'none'"), not(containsString("unsafe-inline"))));
+  }
+
+  @Test
+  @DisplayName("Unknown API routes and wrong methods return JSON errors, not framework pages")
+  void apiErrorsAreJson() {
+    given().spec(authed).when().get("/api/does-not-exist").then().statusCode(404).body("error", equalTo("not_found"));
+    given().spec(authed).when().put("/api/submissions").then().statusCode(405).body("error", equalTo("method_not_allowed"));
+  }
+
+  @Test
+  @DisplayName("Server-owned properties cannot be set by the client (mass assignment)")
+  void massAssignmentIsIgnored() {
+    java.util.Map<String, Object> payload = Submissions.plagiarised();
+    payload.put("id", "attacker-chosen");
+    payload.put("status", "clear");
+    payload.put("similarity_score", 0);
+    String id = given().spec(authed).body(payload).when().post("/api/submissions").then().statusCode(201)
+        .body("id", not(equalTo("attacker-chosen"))).body("status", equalTo("flagged")).body("similarity_score", equalTo(100.0f))
+        .extract().path("id");
+    given().spec(authed).delete("/api/submissions/" + id);
+  }
+
+  @Test
+  @DisplayName("A cross-site form post is refused")
+  void crossSiteFormPostIsRefused() {
+    given().header("Sec-Fetch-Site", "cross-site").header("Origin", "https://evil.example")
+        .contentType("application/x-www-form-urlencoded")
+        .formParam("title", "Forged").formParam("author", "x").formParam("text", "forged by another website entirely")
+        .redirects().follow(false)
+        .when().post("/submit").then().statusCode(403);
   }
 
   @Test

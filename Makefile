@@ -46,10 +46,10 @@ live-test:
 	pytest -m "smoke or api or security or ui" --junitxml=reports/live.xml --html=reports/live.html --self-contained-html
 
 audit:
-	python3 -m pip_audit -r requirements.txt -f json -o reports/pip-audit.json || true
 	python3 -m pip_audit -r requirements.txt
-	bandit -c security/bandit.yaml -r app aws -f json -o reports/bandit.json || true
-	bandit -c security/bandit.yaml -r app aws -ll
+	bandit -q -c security/bandit.yaml -r app aws -ll
+	cfn-lint infra/template.yaml infra/github-oidc-role.yaml
+	gitleaks detect --source . --no-banner --redact
 
 unit:
 	pytest tests/unit --cov=app --cov=aws --cov-report=term-missing --cov-report=html:reports/coverage
