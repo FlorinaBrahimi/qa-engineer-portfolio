@@ -23,7 +23,7 @@ java:
 
 # Java suite against the deployed stack, including checks of DynamoDB, Lambda and CloudWatch.
 java-aws:
-	cd java-api-tests && mvn -B clean test -Paws
+	cd java-api-tests && mvn -B clean test -Paws -Dapi.key=$${SUBMISSION_API_KEY:-qa-demo-key}
 
 perf:
 	jmeter -n -t performance/submissions_load_test.jmx -Jhost=localhost -Jport=5001 -l reports/perf.jtl

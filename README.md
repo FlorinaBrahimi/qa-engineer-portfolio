@@ -25,6 +25,12 @@ make deploy           # deploy to AWS (Lambda + DynamoDB), see infra/README.md
 Run a slice: `pytest -m smoke`, `pytest -m "ui or a11y"`, `pytest -m api -n auto`.
 Target a deployed environment: `BASE_URL=https://staging.example pytest -m smoke`.
 
+## API key
+
+`qa-demo-key` is the default for local, Docker and CI test runs only. The deployed AWS app uses
+a random key held in the `SUBMISSION_API_KEY` GitHub secret and in the git-ignored `.env`, so
+it never appears in this repository. Load `.env` before running anything against the live URL.
+
 ## Requirement to evidence map
 
 | Role requirement | Where it is demonstrated |
