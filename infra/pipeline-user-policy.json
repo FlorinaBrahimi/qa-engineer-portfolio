@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageTheGitHubConnection",
+      "Effect": "Allow",
+      "Action": [
+        "codeconnections:CreateConnection", "codeconnections:GetConnection", "codeconnections:ListConnections",
+        "codeconnections:DeleteConnection", "codeconnections:PassConnection", "codeconnections:UseConnection",
+        "codeconnections:TagResource", "codeconnections:ListTagsForResource",
+        "codestar-connections:GetConnection", "codestar-connections:PassConnection", "codestar-connections:UseConnection"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "StoreThePipelineApiKey",
+      "Effect": "Allow",
+      "Action": ["ssm:PutParameter", "ssm:GetParameter", "ssm:DeleteParameter", "ssm:AddTagsToResource"],
+      "Resource": "arn:aws:ssm:*:964867889760:parameter/submission-service-aws-ci/*"
+    }
+  ]
+}

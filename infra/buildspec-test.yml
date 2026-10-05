@@ -1,0 +1,47 @@
+version: 0.2
+# Stage 2 of the AWS pipeline: everything that can be checked before deploying.
+env:
+  variables:
+    PYTHONDONTWRITEBYTECODE: "1"
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+      java: corretto17
+    commands:
+      - python -m pip install -q --upgrade pip
+      - python -m pip install -q -r requirements.txt
+      - python -m playwright install --with-deps chromium
+      - mkdir -p reports
+  pre_build:
+    commands:
+      - python -m pip_audit -r requirements.txt
+      - python -m bandit -q -c security/bandit.yaml -r app aws -ll
+      - cfn-lint infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml
+  build:
+    commands:
+      - python -m pytest -m "not scale" --junitxml=reports/pytest.xml --cov=app --cov=aws --cov-fail-under=80
+      - python -m tools.a11y_report
+      - |
+        PORT=5011 python -m app.server > reports/java-sut.log 2>&1 &
+        SUT_PID=$!
+        for _ in $(seq 1 20); do curl -sf http://localhost:5011/health > /dev/null && break; sleep 1; done
+        (cd java-api-tests && mvn -B -q clean test -Dbase.url=http://localhost:5011); RC=$?
+        kill $SUT_PID || true
+        exit $RC
+reports:
+  $REPORT_GROUP:
+    files:
+      - reports/pytest.xml
+      - java-api-tests/target/surefire-reports/*.xml
+    file-format: JUNITXML
+artifacts:
+  files:
+    - reports/accessibility.html
+    - reports/accessibility.md
+  discard-paths: yes
+cache:
+  paths:
+    - /root/.cache/pip/**/*
+    - /root/.m2/**/*
+    - /root/.cache/ms-playwright/**/*

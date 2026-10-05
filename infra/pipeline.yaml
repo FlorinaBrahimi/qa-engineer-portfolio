@@ -1,0 +1,301 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  AWS-native CI/CD for the Submission Service: CodePipeline (V2) pulls from GitHub through a
+  CodeConnections connection, CodeBuild tests the code, deploys a separate application stack,
+  then tests that live stack. Independent of the GitHub Actions pipeline, which deploys the
+  primary stack.
+
+Parameters:
+  ConnectionArn:
+    Type: String
+    Description: ARN of an AVAILABLE CodeConnections connection to GitHub (authorised in the console)
+  FullRepositoryId:
+    Type: String
+    Default: FlorinaBrahimi/qa-engineer-portfolio
+  BranchName:
+    Type: String
+    Default: main
+  TargetStackName:
+    Type: String
+    Default: submission-service-aws-ci
+    Description: Application stack this pipeline deploys. Must differ from the stack GitHub Actions deploys.
+  ApiKeyParameterName:
+    Type: String
+    Default: /submission-service-aws-ci/api-key
+    Description: SSM SecureString holding the API key for the target stack
+
+Resources:
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-old-artifacts
+            Status: Enabled
+            ExpirationInDays: 14
+
+  BuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/codebuild/${AWS::StackName}"
+      RetentionInDays: 7
+
+  TestReports:
+    Type: AWS::CodeBuild::ReportGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-tests"
+      Type: TEST
+      DeleteReports: true
+      ExportConfig: { ExportConfigType: NO_EXPORT }
+
+  LiveReports:
+    Type: AWS::CodeBuild::ReportGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-live-tests"
+      Type: TEST
+      DeleteReports: true
+      ExportConfig: { ExportConfigType: NO_EXPORT }
+
+  # ---------- Roles ----------
+  # Test builds can only write logs, artifacts and test reports: they never touch the app.
+  TestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: codebuild.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition: { StringEquals: { "aws:SourceAccount": !Ref "AWS::AccountId" } }
+      Policies:
+        - PolicyName: build-basics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub "${BuildLogGroup.Arn}:*"
+              - Effect: Allow
+                Action: [s3:GetObject, s3:GetObjectVersion, s3:PutObject]
+                Resource: !Sub "${ArtifactBucket.Arn}/*"
+              - Effect: Allow
+                Action: [codebuild:CreateReport, codebuild:UpdateReport, codebuild:BatchPutTestCases, codebuild:BatchPutCodeCoverages]
+                Resource: [!GetAtt TestReports.Arn, !GetAtt LiveReports.Arn]
+
+  # Deploy and live-test builds may manage only the target stack and resources named after it.
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: codebuild.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition: { StringEquals: { "aws:SourceAccount": !Ref "AWS::AccountId" } }
+      Policies:
+        - PolicyName: build-basics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub "${BuildLogGroup.Arn}:*"
+              - Effect: Allow
+                Action: [s3:GetObject, s3:GetObjectVersion, s3:PutObject]
+                Resource: !Sub "${ArtifactBucket.Arn}/*"
+              - Effect: Allow
+                Action: [codebuild:CreateReport, codebuild:UpdateReport, codebuild:BatchPutTestCases]
+                Resource: [!GetAtt TestReports.Arn, !GetAtt LiveReports.Arn]
+              - Effect: Allow
+                Action: ssm:GetParameters
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ApiKeyParameterName}"
+        - PolicyName: deploy-target-stack-only
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [cloudformation:CreateStack, cloudformation:UpdateStack, cloudformation:DescribeStacks, cloudformation:DescribeStackEvents,
+                         cloudformation:CreateChangeSet, cloudformation:DescribeChangeSet, cloudformation:ExecuteChangeSet, cloudformation:DeleteChangeSet,
+                         cloudformation:GetTemplateSummary, cloudformation:GetTemplate]
+                Resource: !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${TargetStackName}/*"
+              - Effect: Allow
+                Action: [s3:CreateBucket, s3:ListBucket, s3:GetBucketLocation, s3:PutObject, s3:GetObject]
+                Resource:
+                  - !Sub "arn:aws:s3:::${TargetStackName}-artifacts-${AWS::AccountId}"
+                  - !Sub "arn:aws:s3:::${TargetStackName}-artifacts-${AWS::AccountId}/*"
+              - Effect: Allow
+                Action: lambda:*
+                Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${TargetStackName}-*"
+              - Effect: Allow
+                Action: dynamodb:*
+                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TargetStackName}-*"
+              - Effect: Allow
+                Action: [logs:CreateLogGroup, logs:DeleteLogGroup, logs:PutRetentionPolicy, logs:DescribeLogGroups, logs:TagResource, logs:ListTagsForResource]
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${TargetStackName}-*"
+              - Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: "*"
+              - Effect: Allow
+                Action: [cloudwatch:PutMetricAlarm, cloudwatch:DeleteAlarms, cloudwatch:DescribeAlarms]
+                Resource: "*"
+              - Effect: Allow
+                Action: [iam:CreateRole, iam:DeleteRole, iam:GetRole, iam:PassRole, iam:AttachRolePolicy, iam:DetachRolePolicy,
+                         iam:PutRolePolicy, iam:DeleteRolePolicy, iam:GetRolePolicy, iam:TagRole]
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/${TargetStackName}-*"
+              - Effect: Allow
+                Action: sts:GetCallerIdentity
+                Resource: "*"
+
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: codepipeline.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition: { StringEquals: { "aws:SourceAccount": !Ref "AWS::AccountId" } }
+      Policies:
+        - PolicyName: pipeline
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [s3:GetObject, s3:GetObjectVersion, s3:PutObject, s3:GetBucketVersioning, s3:ListBucket]
+                Resource: [!GetAtt ArtifactBucket.Arn, !Sub "${ArtifactBucket.Arn}/*"]
+              - Effect: Allow
+                Action: [codebuild:StartBuild, codebuild:BatchGetBuilds]
+                Resource: [!GetAtt TestProject.Arn, !GetAtt DeployProject.Arn, !GetAtt LiveTestProject.Arn]
+              # UseConnection alone would reach every repository the connection can see;
+              # the condition limits this pipeline to one repository.
+              - Effect: Allow
+                Action: [codeconnections:UseConnection, codestar-connections:UseConnection]
+                Resource: !Ref ConnectionArn
+                Condition:
+                  "ForAllValues:StringEquals":
+                    "codeconnections:FullRepositoryId": !Ref FullRepositoryId
+                    "codestar-connections:FullRepositoryId": !Ref FullRepositoryId
+
+  # ---------- Build projects ----------
+  TestProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${AWS::StackName}-test"
+      Description: Unit, API, UI, accessibility and security suites, Java API suite, and code scans
+      ServiceRole: !GetAtt TestRole.Arn
+      Artifacts: { Type: CODEPIPELINE }
+      Source: { Type: CODEPIPELINE, BuildSpec: infra/buildspec-test.yml }
+      TimeoutInMinutes: 20
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        EnvironmentVariables:
+          - { Name: REPORT_GROUP, Value: !GetAtt TestReports.Arn }
+      LogsConfig:
+        CloudWatchLogs: { Status: ENABLED, GroupName: !Ref BuildLogGroup, StreamName: test }
+
+  DeployProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${AWS::StackName}-deploy"
+      Description: Packages the app and deploys the target CloudFormation stack
+      ServiceRole: !GetAtt DeployRole.Arn
+      Artifacts: { Type: CODEPIPELINE }
+      Source: { Type: CODEPIPELINE, BuildSpec: infra/buildspec-deploy.yml }
+      TimeoutInMinutes: 15
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        EnvironmentVariables:
+          - { Name: TARGET_STACK, Value: !Ref TargetStackName }
+          - { Name: SUBMISSION_API_KEY, Type: PARAMETER_STORE, Value: !Ref ApiKeyParameterName }
+      LogsConfig:
+        CloudWatchLogs: { Status: ENABLED, GroupName: !Ref BuildLogGroup, StreamName: deploy }
+
+  LiveTestProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${AWS::StackName}-live-test"
+      Description: Python and Java suites, with AWS resource checks, against the stack just deployed
+      ServiceRole: !GetAtt DeployRole.Arn
+      Artifacts: { Type: CODEPIPELINE }
+      Source: { Type: CODEPIPELINE, BuildSpec: infra/buildspec-live.yml }
+      TimeoutInMinutes: 20
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        EnvironmentVariables:
+          - { Name: TARGET_STACK, Value: !Ref TargetStackName }
+          - { Name: SUBMISSION_API_KEY, Type: PARAMETER_STORE, Value: !Ref ApiKeyParameterName }
+          - { Name: REPORT_GROUP, Value: !GetAtt LiveReports.Arn }
+      LogsConfig:
+        CloudWatchLogs: { Status: ENABLED, GroupName: !Ref BuildLogGroup, StreamName: live-test }
+
+  # ---------- Pipeline ----------
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Ref AWS::StackName
+      PipelineType: V2
+      ExecutionMode: QUEUED
+      RoleArn: !GetAtt PipelineRole.Arn
+      ArtifactStore: { Type: S3, Location: !Ref ArtifactBucket }
+      Triggers:
+        - ProviderType: CodeStarSourceConnection
+          GitConfiguration:
+            SourceActionName: GitHub
+            Push:
+              - Branches: { Includes: [!Ref BranchName] }
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: GitHub
+              ActionTypeId: { Category: Source, Owner: AWS, Provider: CodeStarSourceConnection, Version: "1" }
+              Configuration:
+                ConnectionArn: !Ref ConnectionArn
+                FullRepositoryId: !Ref FullRepositoryId
+                BranchName: !Ref BranchName
+                OutputArtifactFormat: CODE_ZIP
+                DetectChanges: "false"
+              OutputArtifacts: [{ Name: Source }]
+        - Name: Test
+          Actions:
+            - Name: Suites-and-scans
+              ActionTypeId: { Category: Build, Owner: AWS, Provider: CodeBuild, Version: "1" }
+              Configuration: { ProjectName: !Ref TestProject }
+              InputArtifacts: [{ Name: Source }]
+        - Name: Deploy
+          Actions:
+            - Name: CloudFormation-stack
+              ActionTypeId: { Category: Build, Owner: AWS, Provider: CodeBuild, Version: "1" }
+              Configuration: { ProjectName: !Ref DeployProject }
+              InputArtifacts: [{ Name: Source }]
+        - Name: Verify
+          Actions:
+            - Name: Live-tests
+              ActionTypeId: { Category: Build, Owner: AWS, Provider: CodeBuild, Version: "1" }
+              Configuration: { ProjectName: !Ref LiveTestProject }
+              InputArtifacts: [{ Name: Source }]
+
+Outputs:
+  PipelineName:
+    Value: !Ref Pipeline
+  PipelineConsoleUrl:
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/codesuite/codepipeline/pipelines/${Pipeline}/view?region=${AWS::Region}"
+  TargetStack:
+    Value: !Ref TargetStackName

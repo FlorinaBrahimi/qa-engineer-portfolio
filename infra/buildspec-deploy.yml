@@ -1,0 +1,11 @@
+version: 0.2
+# Stage 3: deploy the target stack with the same script used locally and by GitHub Actions.
+# SUBMISSION_API_KEY arrives from SSM Parameter Store (SecureString), never from this file.
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+  build:
+    commands:
+      - export AWS_REGION="$AWS_DEFAULT_REGION"
+      - infra/deploy.sh "$TARGET_STACK"

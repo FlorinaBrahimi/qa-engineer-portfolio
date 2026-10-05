@@ -48,7 +48,7 @@ live-test:
 audit:
 	python3 -m pip_audit -r requirements.txt
 	bandit -q -c security/bandit.yaml -r app aws -ll
-	cfn-lint infra/template.yaml infra/github-oidc-role.yaml
+	cfn-lint infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml
 	gitleaks detect --source . --no-banner --redact
 
 unit:
@@ -66,3 +66,13 @@ jira-dry-run:
 # Accessibility audit: writes reports/accessibility.html, .json and .md
 a11y:
 	python3 -m tools.a11y_report
+
+# AWS-native pipeline (CodePipeline + CodeBuild). See docs/13_aws_pipeline.md
+aws-pipeline-connection:
+	infra/pipeline-setup.sh connection
+
+aws-pipeline:
+	infra/pipeline-setup.sh deploy
+
+aws-pipeline-status:
+	infra/pipeline-setup.sh status

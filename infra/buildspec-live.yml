@@ -1,0 +1,33 @@
+version: 0.2
+# Stage 4: prove the stack that was just deployed, from the outside and from the AWS side.
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+      java: corretto17
+    commands:
+      - python -m pip install -q --upgrade pip
+      - python -m pip install -q -r requirements.txt
+      - python -m playwright install --with-deps chromium
+      - mkdir -p reports
+  pre_build:
+    commands:
+      - export BASE_URL="$(aws cloudformation describe-stacks --stack-name "$TARGET_STACK" --query "Stacks[0].Outputs[?OutputKey=='AppUrl'].OutputValue" --output text)"
+      - export BASE_URL="${BASE_URL%/}"
+      - echo "Testing $BASE_URL"
+      - curl -sf "$BASE_URL/health"
+  build:
+    commands:
+      - python -m pytest -m "smoke or api or security or ui or a11y" --junitxml=reports/live.xml
+      - cd java-api-tests && mvn -B -q clean test -Paws -Daws.stack="$TARGET_STACK" -Daws.region="$AWS_DEFAULT_REGION" -Dapi.key="$SUBMISSION_API_KEY"
+reports:
+  $REPORT_GROUP:
+    files:
+      - reports/live.xml
+      - java-api-tests/target/surefire-reports/*.xml
+    file-format: JUNITXML
+cache:
+  paths:
+    - /root/.cache/pip/**/*
+    - /root/.m2/**/*
+    - /root/.cache/ms-playwright/**/*
