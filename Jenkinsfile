@@ -1,7 +1,7 @@
 // Continuous Testing pipeline for the Submission Service.
 // Stages fan out so UI, API and Java suites run in parallel; the pipeline fails fast on smoke.
 pipeline {
-  agent { docker { image 'mcr.microsoft.com/playwright/python:v1.47.0-jammy' } }
+  agent { dockerfile true }
 
   options {
     timestamps()
@@ -17,8 +17,7 @@ pipeline {
   stages {
     stage('Install') {
       steps {
-        sh 'pip install -r requirements.txt'
-        sh 'python -m playwright install chromium'
+        sh 'python --version && pip list | grep -i playwright'
       }
     }
 

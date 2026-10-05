@@ -1,0 +1,7 @@
+.git
+.env
+reports
+build
+java-api-tests/target
+__pycache__
+.pytest_cache
