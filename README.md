@@ -88,6 +88,7 @@ Jenkinsfile, .github/workflows/ci.yml, Dockerfile, docker-compose.yml, Makefile
 | Java REST Assured with AWS resource checks | live AWS | 61 passed, warm p95 latency 98 ms |
 | JMeter, 20 users for 30 s | local | 2,656 requests, 0% errors, p95 8 ms |
 | Code coverage of `app/` and `aws/` | local | 97% |
+| Jenkins pipeline, all stages | local Jenkins 2.584 | Build passed: 195 tests passed, 1 skipped, in 84 seconds |
 | pip-audit, bandit, actionlint | repo | No known vulnerabilities, no findings, clean |
 
 Defects these runs found and fixed are logged as DEF-104, DEF-105 and DEF-106 in [docs/04_defect_management.md](docs/04_defect_management.md).
