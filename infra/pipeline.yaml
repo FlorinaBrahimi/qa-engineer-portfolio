@@ -271,7 +271,7 @@ Resources:
                 FullRepositoryId: !Ref FullRepositoryId
                 BranchName: !Ref BranchName
                 OutputArtifactFormat: CODE_ZIP
-                DetectChanges: "false"
+                DetectChanges: "true"   # required for the push trigger below to start runs
               OutputArtifacts: [{ Name: Source }]
         - Name: Test
           Actions:
