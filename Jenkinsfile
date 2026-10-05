@@ -13,6 +13,11 @@ pipeline {
     disableConcurrentBuilds()
   }
 
+  parameters {
+    booleanParam(name: 'RUN_CODEBUILD', defaultValue: true,
+                 description: 'Also build this commit in AWS CodeBuild (about 3 billable build minutes)')
+  }
+
   triggers {
     cron('H 2 * * *')        // nightly run, which also enables the performance stage
     pollSCM('H/15 * * * *')  // pick up pushes without needing a webhook into a local Jenkins
@@ -67,7 +72,7 @@ pipeline {
             sh '''
               "$PY" -m pip_audit -r requirements.txt
               "$PY" -m bandit -q -c security/bandit.yaml -r app aws -ll
-              "$PY" -m cfnlint infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml
+              "$WORKSPACE/.venv/bin/cfn-lint" infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml
               if command -v gitleaks > /dev/null; then gitleaks detect --source . --no-banner --redact; else echo "gitleaks not installed on this agent; secret scan runs in GitHub Actions"; fi
             '''
           }
@@ -85,6 +90,20 @@ pipeline {
             '''
           }
         }
+      }
+    }
+
+    stage('AWS CodeBuild') {
+      // Jenkins orchestrates; AWS CodeBuild does the work. The same commit is built and
+      // tested on a clean AWS Linux machine, and its log is streamed back into this console.
+      // Uses the AWS credentials of the account Jenkins runs under (default provider chain).
+      when { expression { return params.RUN_CODEBUILD } }
+      steps {
+        awsCodeBuild projectName: 'submission-service-pipeline-jenkins',
+                     region: 'eu-west-2',
+                     credentialsType: 'keys',
+                     sourceControlType: 'project',
+                     sourceVersion: env.GIT_COMMIT
       }
     }
 

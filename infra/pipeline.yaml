@@ -246,6 +246,34 @@ Resources:
       LogsConfig:
         CloudWatchLogs: { Status: ENABLED, GroupName: !Ref BuildLogGroup, StreamName: live-test }
 
+  # A stand-alone project that Jenkins starts through the AWS CodeBuild plugin. It fetches
+  # the public repository itself, at the commit Jenkins is building, so the same change is
+  # verified on a clean AWS Linux machine as well as on the Jenkins agent.
+  JenkinsBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${AWS::StackName}-jenkins"
+      Description: Started by Jenkins. Runs the suites and scans on a clean Linux build machine
+      ServiceRole: !GetAtt TestRole.Arn
+      Artifacts: { Type: NO_ARTIFACTS }
+      Source:
+        Type: GITHUB
+        Location: !Sub "https://github.com/${FullRepositoryId}.git"
+        BuildSpec: infra/buildspec-test.yml
+        GitCloneDepth: 1
+        ReportBuildStatus: false
+      SourceVersion: !Ref BranchName
+      TimeoutInMinutes: 20
+      ConcurrentBuildLimit: 1
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        EnvironmentVariables:
+          - { Name: REPORT_GROUP, Value: !GetAtt TestReports.Arn }
+      LogsConfig:
+        CloudWatchLogs: { Status: ENABLED, GroupName: !Ref BuildLogGroup, StreamName: jenkins }
+
   # ---------- Pipeline ----------
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -299,3 +327,6 @@ Outputs:
     Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/codesuite/codepipeline/pipelines/${Pipeline}/view?region=${AWS::Region}"
   TargetStack:
     Value: !Ref TargetStackName
+  JenkinsProjectName:
+    Description: CodeBuild project name for the Jenkinsfile's AWS CodeBuild stage
+    Value: !Ref JenkinsBuildProject
