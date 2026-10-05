@@ -1,6 +1,8 @@
 # docker compose up --build --abort-on-container-exit --exit-code-from tests
 services:
-  app:
+  # Not named "app": .app is an HSTS-preloaded TLD, so Chromium upgrades http://app to https
+  # and every browser test fails to connect.
+  sut:
     build: .
     command: python -m app.server
     environment:
@@ -14,10 +16,10 @@ services:
   tests:
     build: .
     depends_on:
-      app:
+      sut:
         condition: service_healthy
     environment:
-      BASE_URL: http://app:5001
+      BASE_URL: http://sut:5001
       SUBMISSION_API_KEY: qa-demo-key
     command: pytest -m "not scale" --junitxml=reports/docker.xml
     volumes:

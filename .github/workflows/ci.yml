@@ -60,6 +60,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose up --build --abort-on-container-exit --exit-code-from tests
+      - name: Publish failing tests as annotations
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import os, xml.etree.ElementTree as ET
+          path = "reports/docker.xml"
+          if not os.path.exists(path):
+              print("::error::No test report was produced. The image build or app start-up failed before pytest ran.")
+              raise SystemExit
+          for tc in ET.parse(path).getroot().iter("testcase"):
+              for kind in ("failure", "error"):
+                  node = tc.find(kind)
+                  if node is not None:
+                      msg = (node.get("message") or "").replace("\n", " ")[:300]
+                      print(f"::error::{tc.get('classname')}::{tc.get('name')} {kind}: {msg}")
+          PY
 
   security-scans:
     runs-on: ubuntu-latest

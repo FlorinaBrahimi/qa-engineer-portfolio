@@ -37,7 +37,7 @@ A test is merged only if it:
 | Environment | Purpose | Data | Target |
 |---|---|---|---|
 | In-process | Fast feedback, developer laptops, PR checks | Factory generated | default |
-| Docker compose | Same as PR but containerised, mirrors CI image | Factory generated | `BASE_URL=http://app:5001` |
+| Docker compose | Same as PR but containerised, mirrors CI image | Factory generated | `BASE_URL=http://sut:5001` |
 | Staging | Nightly full regression, JMeter, ZAP | Masked production-shaped snapshot | `BASE_URL=https://staging...` |
 | Production | Post-deploy smoke only, read-only | Live | `pytest -m smoke` |
 
