@@ -7,6 +7,12 @@ on:
   schedule:
     - cron: "0 2 * * *"   # nightly full run incl. scale tests
 
+# One run per branch at a time. A newer push cancels the run it supersedes, so a burst of
+# pushes cannot exhaust the free pool of GitHub-hosted runners (which left jobs unstarted).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   python-suites:
     runs-on: ubuntu-latest
