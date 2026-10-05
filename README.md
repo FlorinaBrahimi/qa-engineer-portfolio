@@ -81,14 +81,15 @@ Jenkinsfile, .github/workflows/ci.yml, Dockerfile, docker-compose.yml, Makefile
 
 | Suite | Target | Result |
 |---|---|---|
-| Python, 286 tests (unit, api, ui, integration, scale, security, a11y, mobile, aws, ai_testing) | local | 280 passed, 6 skipped (no Appium server) |
-| Python smoke, API, security, UI, accessibility | live AWS | 89 passed |
+| Python, 287 tests (unit, api, ui, integration, scale, security, a11y, mobile, aws, ai_testing) | local | 281 passed, 6 skipped (no Appium server) |
+| Python smoke, API and security suites | live AWS, post-deploy | 197 passed |
 | AI-generated API tests, 45 cases | local and live AWS | 45 passed after fixing the defect they found |
-| Java REST Assured | local | 50 passed, the AWS-only class is skipped |
-| Java REST Assured with AWS resource checks | live AWS | 61 passed, warm p95 latency 98 ms |
+| Java REST Assured | local | 58 passed, the AWS-only class is skipped |
+| Java REST Assured with AWS resource and posture checks | live AWS, post-deploy | 73 passed |
 | JMeter, 20 users for 30 s | local | 2,656 requests, 0% errors, p95 8 ms |
 | Code coverage of `app/` and `aws/` | local | 97% |
 | Jenkins pipeline, all stages | local Jenkins 2.584 | Build passed: 195 tests passed, 1 skipped, in 84 seconds |
-| pip-audit, bandit, actionlint | repo | No known vulnerabilities, no findings, clean |
+| OWASP ZAP baseline (DAST) | pipeline | 65 checks passed, 0 warnings, 0 failures |
+| pip-audit, bandit, gitleaks, cfn-lint, actionlint | repo | No known vulnerabilities, no findings, clean |
 
-Defects these runs found and fixed are logged as DEF-104 to DEF-114 in [docs/04_defect_management.md](docs/04_defect_management.md).
+Defects these runs found and fixed are logged as DEF-104 to DEF-115 in [docs/04_defect_management.md](docs/04_defect_management.md).
