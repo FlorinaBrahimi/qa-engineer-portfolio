@@ -1,0 +1,7 @@
+# gitleaks configuration: default rules plus one documented exception.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "qa-demo-key is the public placeholder for local, Docker and CI runs. It is in the README, and the app refuses it when running on AWS (see test_api2_deployment_with_the_public_default_key_fails_closed)."
+regexes = ['''qa-demo-key''']

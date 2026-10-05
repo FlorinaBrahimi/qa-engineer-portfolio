@@ -50,6 +50,7 @@ class SecurityTest extends BaseApiTest {
     "Referrer-Policy, no-referrer",
     "Cross-Origin-Opener-Policy, same-origin",
     "Cross-Origin-Resource-Policy, same-origin",
+    "Cross-Origin-Embedder-Policy, require-corp",
     "Strict-Transport-Security, max-age=63072000; includeSubDomains",
     "Cache-Control, no-store"
   })

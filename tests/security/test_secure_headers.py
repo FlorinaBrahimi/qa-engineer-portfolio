@@ -9,6 +9,7 @@ REQUIRED = {
     "Referrer-Policy": "no-referrer",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
+    "Cross-Origin-Embedder-Policy": "require-corp",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
 }
 PATHS = ["/", "/accessibility", "/health", "/api/submissions", "/api/does-not-exist", "/static/style.css", "/no-such-page"]

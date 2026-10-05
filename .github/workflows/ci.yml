@@ -110,8 +110,9 @@ jobs:
         run: |
           python -m app.server > sut.log 2>&1 &
           for _ in $(seq 1 20); do curl -sf localhost:5001/health && break; sleep 1; done
-          curl -sf -X POST localhost:5001/api/submissions -H "X-API-Key: qa-demo-key" -H "Content-Type: application/json" \
-            -d '{"title":"ZAP seed","author":"scanner","text":"A seeded submission so the results table has a row to inspect."}'
+          curl -sf -o /dev/null -X POST localhost:5001/submit -H "Sec-Fetch-Site: same-origin" \
+            --data-urlencode "title=ZAP seed" --data-urlencode "author=scanner" \
+            --data-urlencode "text=A seeded submission so the results table has a row to inspect."
       - name: OWASP ZAP baseline scan
         uses: zaproxy/action-baseline@v0.14.0
         with:

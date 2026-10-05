@@ -92,6 +92,7 @@ def security_headers(response):
     h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
     h["Cross-Origin-Opener-Policy"] = "same-origin"
     h["Cross-Origin-Resource-Policy"] = "same-origin"
+    h["Cross-Origin-Embedder-Policy"] = "require-corp"
     h["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     # Submissions are personal work. Never let a shared cache or the browser keep API or page
     # responses; static assets carry no user data and may be cached.
