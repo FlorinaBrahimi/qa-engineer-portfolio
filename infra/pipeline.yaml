@@ -91,6 +91,10 @@ Resources:
               - Effect: Allow
                 Action: [codebuild:CreateReport, codebuild:UpdateReport, codebuild:BatchPutTestCases, codebuild:BatchPutCodeCoverages]
                 Resource: [!GetAtt TestReports.Arn, !GetAtt LiveReports.Arn]
+              # Publish results to the QA Test Plan app (infra/test-plan.yaml).
+              - Effect: Allow
+                Action: [dynamodb:BatchWriteItem, dynamodb:PutItem, dynamodb:UpdateItem]
+                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/qa-test-plan-cases"
 
   # Deploy and live-test builds may manage only the target stack and resources named after it.
   DeployRole:
@@ -117,6 +121,10 @@ Resources:
               - Effect: Allow
                 Action: [codebuild:CreateReport, codebuild:UpdateReport, codebuild:BatchPutTestCases]
                 Resource: [!GetAtt TestReports.Arn, !GetAtt LiveReports.Arn]
+              # Publish results to the QA Test Plan app (infra/test-plan.yaml).
+              - Effect: Allow
+                Action: [dynamodb:BatchWriteItem, dynamodb:PutItem, dynamodb:UpdateItem]
+                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/qa-test-plan-cases"
               - Effect: Allow
                 Action: ssm:GetParameters
                 Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ApiKeyParameterName}"

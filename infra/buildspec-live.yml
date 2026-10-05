@@ -20,6 +20,11 @@ phases:
     commands:
       - python -m pytest -m "smoke or api or security or ui or a11y" --junitxml=reports/live.xml
       - cd java-api-tests && mvn -B -q clean test -Paws -Daws.stack="$TARGET_STACK" -Daws.region="$AWS_DEFAULT_REGION" -Dapi.key="$SUBMISSION_API_KEY"
+  post_build:
+    commands:
+      # Runs whether the build passed or failed, so failures show in the test plan too.
+      - cd "$CODEBUILD_SRC_DIR"
+      - python -m tools.test_plan_sync --junit reports/live.xml 'java-api-tests/target/surefire-reports/*.xml' --source "AWS CodeBuild, live stack ($CODEBUILD_BUILD_NUMBER)" || echo "test plan sync skipped"
 reports:
   $REPORT_GROUP:
     files:

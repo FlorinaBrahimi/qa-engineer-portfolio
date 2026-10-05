@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  QA Test Plan: test case management on AWS. DynamoDB holds manual and automated test
+  cases; a Lambda Function URL serves the plan and records manual results.
+
+Parameters:
+  ArtifactBucket: { Type: String }
+  ArtifactKey: { Type: String }
+  TesterKey:
+    Type: String
+    NoEcho: true
+    MinLength: 20
+    Description: Required to record a manual test result
+  PlanName:
+    Type: String
+    Default: Submission Service v1.1
+
+Resources:
+  CasesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: qa-test-plan-cases
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]
+      KeySchema: [{ AttributeName: id, KeyType: HASH }]
+      PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-app"
+      RetentionInDays: 7
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole]
+      Policies:
+        - PolicyName: cases-table
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:Scan, dynamodb:GetItem, dynamodb:UpdateItem]
+                Resource: !GetAtt CasesTable.Arn
+
+  Function:
+    Type: AWS::Lambda::Function
+    DependsOn: LogGroup
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-app"
+      Runtime: python3.12
+      Handler: testplan.handler.handler
+      Role: !GetAtt Role.Arn
+      MemorySize: 512
+      Timeout: 15
+      Code: { S3Bucket: !Ref ArtifactBucket, S3Key: !Ref ArtifactKey }
+      Environment:
+        Variables:
+          TESTPLAN_TABLE: !Ref CasesTable
+          TESTPLAN_KEY: !Ref TesterKey
+          TESTPLAN_NAME: !Ref PlanName
+
+  Url:
+    Type: AWS::Lambda::Url
+    Properties: { TargetFunctionArn: !GetAtt Function.Arn, AuthType: NONE }
+
+  # A public Function URL needs both statements.
+  UrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties: { FunctionName: !Ref Function, Action: lambda:InvokeFunctionUrl, Principal: "*", FunctionUrlAuthType: NONE }
+
+  InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties: { FunctionName: !Ref Function, Action: lambda:InvokeFunction, Principal: "*", InvokedViaFunctionUrl: true }
+
+Outputs:
+  TestPlanUrl:
+    Value: !GetAtt Url.FunctionUrl
+  TableName:
+    Value: !Ref CasesTable

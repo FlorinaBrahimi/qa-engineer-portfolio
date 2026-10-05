@@ -90,7 +90,7 @@ jobs:
       - name: Static analysis of application code (SAST, bandit; fails on medium and above)
         run: bandit -c security/bandit.yaml -r app aws -ll
       - name: Infrastructure template lint (IaC, cfn-lint)
-        run: cfn-lint infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml
+        run: cfn-lint infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml infra/test-plan.yaml
       - name: Secrets in any commit (gitleaks)
         run: |
           curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar -xz gitleaks

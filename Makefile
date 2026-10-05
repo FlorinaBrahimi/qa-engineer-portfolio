@@ -48,7 +48,7 @@ live-test:
 audit:
 	python3 -m pip_audit -r requirements.txt
 	bandit -q -c security/bandit.yaml -r app aws -ll
-	cfn-lint infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml
+	cfn-lint infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml infra/test-plan.yaml
 	gitleaks detect --source . --no-banner --redact
 
 unit:
@@ -76,3 +76,10 @@ aws-pipeline:
 
 aws-pipeline-status:
 	infra/pipeline-setup.sh status
+
+# QA Test Plan app on AWS. See docs/14_test_plan_on_aws.md
+test-plan:
+	infra/test-plan-deploy.sh
+
+test-plan-sync:
+	python3 -m tools.test_plan_sync --junit "reports/*.xml" "java-api-tests/target/surefire-reports/*.xml" --source "local run"

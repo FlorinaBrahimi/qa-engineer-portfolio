@@ -17,7 +17,7 @@ phases:
     commands:
       - python -m pip_audit -r requirements.txt
       - python -m bandit -q -c security/bandit.yaml -r app aws -ll
-      - cfn-lint infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml
+      - cfn-lint infra/template.yaml infra/github-oidc-role.yaml infra/pipeline.yaml infra/test-plan.yaml
   build:
     commands:
       - python -m pytest -m "not scale" --junitxml=reports/pytest.xml --cov=app --cov=aws --cov-fail-under=80
@@ -29,6 +29,11 @@ phases:
         (cd java-api-tests && mvn -B -q clean test -Dbase.url=http://localhost:5011); RC=$?
         kill $SUT_PID || true
         exit $RC
+  post_build:
+    commands:
+      # Runs whether the build passed or failed, so failures show in the test plan too.
+      - cd "$CODEBUILD_SRC_DIR"
+      - python -m tools.test_plan_sync --junit reports/pytest.xml 'java-api-tests/target/surefire-reports/*.xml' --source "AWS CodeBuild, pre-deploy ($CODEBUILD_BUILD_NUMBER)" || echo "test plan sync skipped"
 reports:
   $REPORT_GROUP:
     files:

@@ -36,6 +36,7 @@ it never appears in this repository. Load `.env` before running anything against
 | Role requirement | Where it is demonstrated |
 |---|---|
 | **Test strategy & planning** | [docs/01_test_strategy.md](docs/01_test_strategy.md), [docs/02_test_plan.md](docs/02_test_plan.md), [docs/03_test_cases.md](docs/03_test_cases.md) |
+| **Test management** | A test plan app on AWS (Lambda and DynamoDB) holding 12 manual cases with steps and a results form, plus every automated case with its latest pipeline result: [testplan/](testplan/), [docs/14_test_plan_on_aws.md](docs/14_test_plan_on_aws.md) |
 | **Functional, regression, integration, scale testing** | `tests/api/`, `tests/ui/` (markers `smoke`/`regression`), `tests/integration/`, `tests/scale/` |
 | **UI web automation** | Playwright + Page Object pattern: [tests/ui/pages/submission_page.py](tests/ui/pages/submission_page.py), [tests/ui/test_submission_ui.py](tests/ui/test_submission_ui.py) |
 | **API automation, Python** | [tests/api/test_submissions_api.py](tests/api/test_submissions_api.py) with `requests` + pytest |
@@ -45,7 +46,7 @@ it never appears in this repository. Load `.env` before running anything against
 | **Defect management** | Lifecycle, severity model, template and worked examples in [docs/04_defect_management.md](docs/04_defect_management.md) |
 | **Risk mitigation** | Scored register with owners and signals: [docs/05_risk_register.md](docs/05_risk_register.md) |
 | **STLC / QA methodologies** | Entry/exit criteria, levels, pyramid, metrics across `docs/` |
-| **CI/CD/CT: Jenkins** | [Jenkinsfile](Jenkinsfile): Docker-free declarative pipeline with parallel stages, JUnit publishing, security scans and a nightly JMeter stage. Setup: [docs/10_jenkins_setup.md](docs/10_jenkins_setup.md) |
+| **CI/CD/CT: Jenkins** | [Jenkinsfile](Jenkinsfile): Docker-free declarative pipeline with parallel stages, JUnit publishing, security scans and a nightly JMeter stage. Setup: [docs/10_jenkins_setup.md](docs/10_jenkins_setup.md) The build also runs in AWS CodeBuild through the Jenkins plugin |
 | **CI/CD/CT: GitHub** | [.github/workflows/ci.yml](.github/workflows/ci.yml) tests every push; [.github/workflows/deploy.yml](.github/workflows/deploy.yml) then deploys to AWS and tests the live stack. Both proven on GitHub |
 | **CI/CD/CT: AWS-native** | [infra/pipeline.yaml](infra/pipeline.yaml): CodePipeline V2 with CodeBuild. Tests, deploys a separate stack and verifies it, with least-privilege roles and the API key held in SSM. Guide: [docs/13_aws_pipeline.md](docs/13_aws_pipeline.md) |
 | **Docker** | [Dockerfile](Dockerfile), [docker-compose.yml](docker-compose.yml) (app + tests, healthcheck gated) |

@@ -35,6 +35,7 @@ dependencies. Later builds reuse the downloaded browser.
 | Install | Virtual environment, dependencies, Chromium |
 | Smoke | `pytest -m smoke`; the build stops here on failure |
 | Test (parallel) | Unit, API, security and AWS tests; UI, accessibility and mobile; integration and scale; pip-audit and bandit; the Java suite against a locally started app |
+| AWS CodeBuild | Starts the CodeBuild project `submission-service-pipeline-jenkins` through the AWS CodeBuild plugin, building the same commit on a clean AWS Linux machine and streaming its log into the Jenkins console. Uses the AWS credentials of the account Jenkins runs under. Untick `RUN_CODEBUILD` to skip it and save build minutes |
 | Predictive analysis | Flakiness report from run history |
 | Performance | JMeter on every build (20 users, 30 s); the nightly run uses 50 users for 120 s. Results join the test report |
 

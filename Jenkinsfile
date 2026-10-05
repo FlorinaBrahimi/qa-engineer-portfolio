@@ -28,6 +28,7 @@ pipeline {
     PATH = "/opt/homebrew/bin:/Library/Frameworks/Python.framework/Versions/3.12/bin:/usr/local/bin:${env.PATH}"
     PY = "${env.WORKSPACE}/.venv/bin/python"
     SUBMISSION_API_KEY = 'qa-demo-key'
+    AWS_DEFAULT_REGION = 'eu-west-2'
     PYTHONDONTWRITEBYTECODE = '1'
   }
 
@@ -128,6 +129,8 @@ pipeline {
 
   post {
     always {
+      // Publish this build's results to the QA Test Plan app on AWS.
+      sh '''"$PY" -m tools.test_plan_sync --junit "reports/*.xml" "java-api-tests/target/surefire-reports/*.xml" --source "Jenkins build $BUILD_NUMBER" || echo "test plan sync skipped"'''
       junit allowEmptyResults: true, testResults: 'reports/*.xml, java-api-tests/target/surefire-reports/*.xml'
       archiveArtifacts artifacts: 'reports/**', allowEmptyArchive: true
     }
