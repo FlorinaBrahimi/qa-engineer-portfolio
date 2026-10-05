@@ -39,8 +39,8 @@ Target a deployed environment: `BASE_URL=https://staging.example pytest -m smoke
 | **Defect management** | Lifecycle, severity model, template and worked examples in [docs/04_defect_management.md](docs/04_defect_management.md) |
 | **Risk mitigation** | Scored register with owners and signals: [docs/05_risk_register.md](docs/05_risk_register.md) |
 | **STLC / QA methodologies** | Entry/exit criteria, levels, pyramid, metrics across `docs/` |
-| **CI/CD/CT: Jenkins** | [Jenkinsfile](Jenkinsfile): parallel stages, JUnit/HTML publishing, nightly perf |
-| **CI/CD/CT: GitHub** | [.github/workflows/ci.yml](.github/workflows/ci.yml): suite matrix, Java job, Docker job |
+| **CI/CD/CT: Jenkins** | [Jenkinsfile](Jenkinsfile): Docker-free declarative pipeline with parallel stages, JUnit publishing, security scans and a nightly JMeter stage. Setup: [docs/10_jenkins_setup.md](docs/10_jenkins_setup.md) |
+| **CI/CD/CT: GitHub** | [.github/workflows/ci.yml](.github/workflows/ci.yml) tests every push; [.github/workflows/deploy.yml](.github/workflows/deploy.yml) then deploys to AWS and tests the live stack. Both proven on GitHub |
 | **Docker** | [Dockerfile](Dockerfile), [docker-compose.yml](docker-compose.yml) (app + tests, healthcheck gated) |
 | **Agile: Scrum & Kanban, estimation, test data** | [docs/06_agile_practices.md](docs/06_agile_practices.md), [testdata/factory.py](testdata/factory.py) |
 | **AI-assisted test generation** | [ai_testing/generate_tests.py](ai_testing/generate_tests.py) (Claude via Anthropic SDK, grounded in the OpenAPI contract) |
