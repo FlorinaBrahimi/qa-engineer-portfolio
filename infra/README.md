@@ -64,7 +64,8 @@ budget unfair, and the JMeter plan is the right tool for load against a deployed
    ```bash
    aws cloudformation deploy --stack-name submission-service-github-oidc \
      --template-file infra/github-oidc-role.yaml --capabilities CAPABILITY_NAMED_IAM \
-     --parameter-overrides GitHubOrg=<your-github-user> GitHubRepo=<repo-name>
+     --parameter-overrides GitHubOrg=<your-github-user> GitHubRepo=<repo-name> \
+       SubClaimPrefix="$(curl -s https://api.github.com/repos/<your-github-user>/<repo-name>/actions/oidc/customization/sub | python3 -c 'import sys,json; print(json.load(sys.stdin)["sub_claim_prefix"])')"
    aws cloudformation describe-stacks --stack-name submission-service-github-oidc \
      --query "Stacks[0].Outputs[0].OutputValue" --output text
    ```
@@ -84,6 +85,8 @@ make destroy             # delete the stack and the artifact bucket; nothing lef
 There is no "pause" needed: Lambda and on-demand DynamoDB cost nothing while idle.
 
 ## Troubleshooting
+
+- `Not authorized to perform sts:AssumeRoleWithWebIdentity` in the deploy job: the role's trusted subject does not match what GitHub sends. New repositories use subjects with numeric IDs. Redeploy the role stack with `SubClaimPrefix` as shown in step 2.
 
 - `AccessDenied` on deploy: the IAM user is missing one of the policies in step 1.
 - Stack rollback with `CREATE_FAILED` on the function: check the zip was uploaded to the

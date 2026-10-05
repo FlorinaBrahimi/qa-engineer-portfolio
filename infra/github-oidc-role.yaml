@@ -14,6 +14,17 @@ Parameters:
     Type: String
     Default: submission-service
     Description: Name of the application stack the role may manage
+  SubClaimPrefix:
+    Type: String
+    Default: ""
+    Description: >-
+      Exact subject prefix GitHub issues for this repository. Repositories created since 2026
+      use immutable subjects that embed numeric IDs, e.g. repo:owner@123/repo@456. Read it from
+      https://api.github.com/repos/OWNER/REPO/actions/oidc/customization/sub (sub_claim_prefix).
+      Leave empty for older repositories, which use repo:owner/repo.
+
+Conditions:
+  HasSubClaimPrefix: !Not [!Equals [!Ref SubClaimPrefix, ""]]
 
 Resources:
   GitHubOidcProvider:
@@ -37,7 +48,10 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrg}/${GitHubRepo}:*"
+                token.actions.githubusercontent.com:sub: !If
+                  - HasSubClaimPrefix
+                  - !Sub "${SubClaimPrefix}:*"
+                  - !Sub "repo:${GitHubOrg}/${GitHubRepo}:*"
       Policies:
         - PolicyName: deploy-submission-service
           PolicyDocument:
