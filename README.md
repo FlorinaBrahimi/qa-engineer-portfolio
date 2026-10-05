@@ -47,6 +47,7 @@ it never appears in this repository. Load `.env` before running anything against
 | **STLC / QA methodologies** | Entry/exit criteria, levels, pyramid, metrics across `docs/` |
 | **CI/CD/CT: Jenkins** | [Jenkinsfile](Jenkinsfile): Docker-free declarative pipeline with parallel stages, JUnit publishing, security scans and a nightly JMeter stage. Setup: [docs/10_jenkins_setup.md](docs/10_jenkins_setup.md) |
 | **CI/CD/CT: GitHub** | [.github/workflows/ci.yml](.github/workflows/ci.yml) tests every push; [.github/workflows/deploy.yml](.github/workflows/deploy.yml) then deploys to AWS and tests the live stack. Both proven on GitHub |
+| **CI/CD/CT: AWS-native** | [infra/pipeline.yaml](infra/pipeline.yaml): CodePipeline V2 with CodeBuild. Tests, deploys a separate stack and verifies it, with least-privilege roles and the API key held in SSM. Guide: [docs/13_aws_pipeline.md](docs/13_aws_pipeline.md) |
 | **Docker** | [Dockerfile](Dockerfile), [docker-compose.yml](docker-compose.yml) (app + tests, healthcheck gated) |
 | **Agile: Scrum & Kanban, estimation, test data** | [docs/06_agile_practices.md](docs/06_agile_practices.md), [testdata/factory.py](testdata/factory.py) |
 | **AI-assisted test generation** | [ai_testing/generate_tests.py](ai_testing/generate_tests.py) (Claude via Anthropic SDK, grounded in the OpenAPI contract) |
@@ -89,6 +90,7 @@ Jenkinsfile, .github/workflows/ci.yml, Dockerfile, docker-compose.yml, Makefile
 | JMeter, 20 users for 30 s | local | 2,656 requests, 0% errors, p95 8 ms |
 | Code coverage of `app/` and `aws/` | local | 97% |
 | Jenkins pipeline, all stages | local Jenkins 2.584 | Build passed: 195 tests passed, 1 skipped, in 84 seconds |
+| AWS CodePipeline, four stages | AWS | Passed on first run: 338 tests before deploy, 292 against the stack it deployed |
 | OWASP ZAP baseline (DAST) | pipeline | 65 checks passed, 0 warnings, 0 failures |
 | pip-audit, bandit, gitleaks, cfn-lint, actionlint | repo | No known vulnerabilities, no findings, clean |
 
