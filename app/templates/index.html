@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Submission Service</title>
+  <title>{% if errors %}Error: {% endif %}Submission Service</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to main content</a>
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="/" aria-label="Submission Service home">
@@ -24,7 +25,22 @@
     </div>
   </section>
 
-  <main class="page">
+  <main class="page" id="main" tabindex="-1">
+    {% if errors %}
+    <div class="card span-2 error-summary" id="error-summary" role="alert" tabindex="-1" data-testid="error-summary">
+      <h2>There is a problem</h2>
+      <ul>
+        {% for field, message in errors.items() %}
+        <li><a href="#{{ field }}">{{ message | capitalize }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% if added %}
+    <div class="card span-2 status-message" id="status-message" role="status" tabindex="-1" data-testid="status-message">
+      Submission added: “{{ added.title }}” scored {{ added.similarity_score }}% similarity and is {{ added.status }}.
+    </div>
+    {% endif %}
     <section class="card" aria-labelledby="form-heading">
       <h2 id="form-heading">New submission</h2>
       <p class="lede">All fields are required. The text must be at least {{ min_text_length }} characters.</p>
@@ -32,19 +48,19 @@
       <form id="submission-form" method="post" action="/submit" novalidate>
         <div class="field">
           <label for="title">Title</label>
-          <input id="title" name="title" type="text" value="{{ form.get('title', '') }}" aria-describedby="title-error" autocomplete="off">
+          <input id="title" name="title" type="text" value="{{ form.get('title', '') }}" aria-describedby="title-error" autocomplete="off" required aria-required="true"{% if errors.get('title') %} aria-invalid="true"{% endif %}>
           <span id="title-error" class="error" data-testid="error-title">{{ errors.get('title', '') }}</span>
         </div>
 
         <div class="field">
           <label for="author">Author</label>
-          <input id="author" name="author" type="text" value="{{ form.get('author', '') }}" aria-describedby="author-error" autocomplete="off">
+          <input id="author" name="author" type="text" value="{{ form.get('author', '') }}" aria-describedby="author-error" autocomplete="off" required aria-required="true"{% if errors.get('author') %} aria-invalid="true"{% endif %}>
           <span id="author-error" class="error" data-testid="error-author">{{ errors.get('author', '') }}</span>
         </div>
 
         <div class="field">
           <label for="text">Paper text</label>
-          <textarea id="text" name="text" rows="7" aria-describedby="text-error text-hint">{{ form.get('text', '') }}</textarea>
+          <textarea id="text" name="text" rows="7" aria-describedby="text-error text-hint" required aria-required="true"{% if errors.get('text') %} aria-invalid="true"{% endif %}>{{ form.get('text', '') }}</textarea>
           <div class="hint" id="text-hint"><span>Paste the body of the paper.</span><span id="char-count" data-min="{{ min_text_length }}"></span></div>
           <span id="text-error" class="error" data-testid="error-text">{{ errors.get('text', '') }}</span>
         </div>
@@ -79,6 +95,7 @@
       <!-- Scrolls sideways on narrow screens, so it must be reachable and scrollable by keyboard (WCAG 2.1.1). -->
       <div class="table-wrap" tabindex="0" role="region" aria-label="Submissions table, scrollable">
         <table data-testid="submissions-table">
+          <caption class="visually-hidden">Submissions, most recent first, with similarity score and status</caption>
           <thead>
             <tr>
               <th scope="col">Title</th>
@@ -108,6 +125,7 @@
 
   <footer>
     Demo system under test for a QA engineering portfolio. Not affiliated with any commercial integrity product.
+    <a href="/accessibility">Accessibility statement</a>
   </footer>
 
   <script src="{{ url_for('static', filename='app.js') }}"></script>

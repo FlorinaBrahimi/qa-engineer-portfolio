@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accessibility statement - Submission Service</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/" aria-label="Submission Service home"><span class="brand-mark" aria-hidden="true">S</span>Submission Service</a>
+    </div>
+  </header>
+  <main class="page prose" id="main" tabindex="-1">
+    <article class="card span-2">
+      <h1>Accessibility statement</h1>
+      <p>This statement covers the Submission Service demo. It is a portfolio project, not a public service, but it is built and tested as if it were one.</p>
+
+      <h2>What we aim for</h2>
+      <p>The Web Content Accessibility Guidelines (WCAG) version 2.2, level AA.</p>
+
+      <h2>How it has been tested</h2>
+      <ul>
+        <li>Automated WCAG 2.2 A and AA rules (axe-core) on every page state, at desktop and phone widths, on every build.</li>
+        <li>Scripted checks for keyboard-only use, focus order and visibility, reflow at 320 pixels, 200% zoom, increased text spacing, forced-colours mode, reduced motion, error announcement and target size.</li>
+      </ul>
+
+      <h2>Compliance status</h2>
+      <p>No failures are known from the testing above. The service has <strong>not</strong> had a manual audit, a screen reader assessment by a specialist, or testing with disabled users, so it does not claim conformance with WCAG 2.2 AA.</p>
+
+      <h2>Known limitations</h2>
+      <ul>
+        <li>On narrow screens the results table scrolls sideways inside its own region. The region can be focused and scrolled with the arrow keys.</li>
+        <li>Similarity bands use colour as well as the percentage figure. The percentage and the status word carry the same information as text.</li>
+      </ul>
+
+      <h2>Reporting a problem</h2>
+      <p>Raise an issue on the project's GitHub repository, describing the page, what you were trying to do, and the assistive technology you use.</p>
+
+      <p><a href="/">Back to the Submission Service</a></p>
+    </article>
+  </main>
+  <footer>Statement prepared 5 October 2026. Reviewed whenever the user interface changes.</footer>
+</body>
+</html>

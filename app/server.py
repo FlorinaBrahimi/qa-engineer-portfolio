@@ -12,6 +12,7 @@ POST /api/submissions             create submission         (requires X-API-Key)
 GET  /api/submissions/<id>        fetch one                 (requires X-API-Key)
 DELETE /api/submissions/<id>      delete one                (requires X-API-Key)
 GET  /                            HTML form + results table
+GET  /accessibility               accessibility statement
 POST /submit                      HTML form handler
 
 Storage is pluggable (app/storage.py): in-memory by default, DynamoDB when
@@ -189,7 +190,10 @@ def delete_submission(submission_id: str):
 
 @app.get("/")
 def index():
-    return render_template("index.html", **page_context(store.list()))
+    # After a successful form post we redirect here with ?added=<id> so the page can confirm
+    # the result in a status message that assistive technology announces (WCAG 4.1.3).
+    added = store.get(request.args.get("added", "")) if request.args.get("added") else None
+    return render_template("index.html", **page_context(store.list()), added=added)
 
 
 @app.post("/submit")
@@ -198,8 +202,14 @@ def submit_form():
     errors = validate(payload)
     if errors:
         return render_template("index.html", **page_context(store.list(), errors, payload)), 400
-    store.put(build_submission(payload))
-    return redirect(url_for("index"))
+    submission = build_submission(payload)
+    store.put(submission)
+    return redirect(url_for("index", added=submission["id"]))
+
+
+@app.get("/accessibility")
+def accessibility_statement():
+    return render_template("accessibility.html")
 
 
 def reset_store() -> None:

@@ -214,3 +214,50 @@ footer { max-width: 1100px; margin: 0 auto; padding: 0 1rem 2rem; color: var(--m
   table { min-width: 640px; }
   td.title { white-space: nowrap; overflow-wrap: normal; max-width: none; }
 }
+
+/* ---------- Accessibility ---------- */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+/* First tab stop: lets keyboard users jump past the header (WCAG 2.4.1). */
+.skip-link {
+  position: absolute; left: .5rem; top: -4rem; z-index: 10;
+  background: #fff; color: var(--navy); font-weight: 700; padding: .6rem 1rem;
+  border: 3px solid var(--navy); border-radius: 6px; text-decoration: underline;
+}
+.skip-link:focus { top: .5rem; }
+main:focus { outline: none; }
+
+.error-summary { border: 3px solid #a30d2d; }
+.error-summary h2 { color: #a30d2d; margin-bottom: .4rem; }
+.error-summary ul { margin: 0; padding-left: 1.2rem; }
+.error-summary a { color: #a30d2d; font-weight: 600; }
+.error-summary:focus, .status-message:focus { outline: 3px solid rgba(22, 48, 92, .45); outline-offset: 2px; }
+.status-message { border: 2px solid var(--ok); background: #e6f4ea; color: #14532d; font-weight: 600; }
+input[aria-invalid="true"], textarea[aria-invalid="true"] { border: 2px solid #a30d2d; }
+
+a { color: #0b4a99; }
+a:focus-visible { outline: 3px solid rgba(22, 48, 92, .55); outline-offset: 2px; border-radius: 3px; }
+footer a { color: #0b4a99; }
+/* Stand-alone links get a 24 px minimum target (WCAG 2.5.8). */
+footer a, .error-summary a, .prose p > a:only-child { display: inline-block; min-height: 24px; padding: .2rem 0; }
+.topbar a:focus-visible { outline-color: #fff; }
+
+.prose h1 { margin-top: 0; }
+.prose h2 { margin-top: 1.4rem; }
+.prose li { margin-bottom: .35rem; }
+
+/* Honour the user's request for less motion (WCAG 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; scroll-behavior: auto !important; }
+}
+
+/* Windows High Contrast and other forced-colour modes remove backgrounds and shadows,
+   so anything that relied on a fill needs a real border or system colour. */
+@media (forced-colors: active) {
+  .card, .stat, .pill, .btn, .env-badge, .brand-mark, .error-summary, .status-message { border: 1px solid CanvasText; }
+  .btn { border-width: 2px; }
+  .score::before, .swatch { forced-color-adjust: none; border: 1px solid CanvasText; }
+  input[type="text"]:focus, textarea:focus, .btn:focus-visible, .table-wrap:focus-visible { outline: 3px solid Highlight; }
+}

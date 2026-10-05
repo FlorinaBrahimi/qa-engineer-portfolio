@@ -12,3 +12,10 @@
   text.addEventListener("input", update);
   update();
 })();
+
+// Move focus to the error summary or the success message when the page loads with one, so
+// screen reader and keyboard users are told the outcome of their submission straight away.
+(function () {
+  var target = document.getElementById("error-summary") || document.getElementById("status-message");
+  if (target) target.focus();
+})();

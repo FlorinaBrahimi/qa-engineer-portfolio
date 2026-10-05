@@ -15,12 +15,14 @@ artifact, with a short table on the run's Summary page.
 
 | Layer | What it covers | Where |
 |---|---|---|
-| axe-core rules for WCAG 2.2 A and AA | Four page states: initial, with results, validation errors, phone viewport | `tools/a11y_report.py`, `tests/accessibility/` |
-| Keyboard | Tab order, visible focus on every stop, completing the form with no mouse | same |
+| axe-core rules for WCAG 2.2 A and AA | Six states: initial, results with success message, validation errors, accessibility statement, phone viewport, forced colours | `tools/a11y_report.py`, `tests/accessibility/` |
+| Keyboard | Skip link, tab order, visible focus on every stop, completing the form with no mouse | same |
+| Announcements | Errors summarised in a focused alert with links to fields; fields marked invalid; success confirmed in a focused status message; error state in the page title | same |
+| Display settings | 200% zoom, WCAG text-spacing overrides, forced-colours mode, reduced motion | same |
 | Reflow and target size | No two-way scrolling at 320 px wide; targets at least 24 by 24 px | same |
-| Structure | Page language, single h1, a label per control, table header scope, unique region names | `tests/accessibility/test_a11y.py` |
+| Structure | Page language, single h1, a label per control, table caption and header scope, unique region names | `tests/accessibility/test_a11y.py` |
 
-Latest result: 0 rule violations, 29 distinct rules passed, 5 of 5 scripted checks passed.
+Latest result: 0 rule violations, 29 distinct rules passed, 15 of 15 scripted checks passed.
 
 ## Items axe could not decide, reviewed by hand
 
@@ -31,18 +33,31 @@ axe reports `color-contrast` as "needs review" when it cannot compute a backgrou
 | Hero heading and paragraph | Background is a gradient | White on the lightest gradient colour is 13.0:1; the 80% white paragraph is 8.9:1. Both pass 4.5:1. |
 | Table cells on the phone viewport | Cells are scrolled out of view | Same colours as the desktop table, which axe measured and passed. |
 
-## What automated testing cannot show
+## What has been built in for assistive technology
 
-Automated rules can only detect a minority of WCAG failures. The following need a person,
-and have **not** been done for this project:
+| Need | What the page does | WCAG |
+|---|---|---|
+| Skip repeated content | "Skip to main content" link is the first tab stop | 2.4.1 |
+| Know that a submission failed, and why | A "There is a problem" alert takes focus and links to each field; fields carry `aria-invalid` and are tied to their message; the page title starts with "Error:" | 3.3.1, 4.1.3, 2.4.2 |
+| Know that a submission worked | A status message takes focus and states the score and status in words | 4.1.3 |
+| Understand the table | Hidden caption, column header scope, and a named, keyboard-scrollable region on narrow screens | 1.3.1, 2.1.1 |
+| High contrast mode | Borders and system colours replace background fills | 1.4.11 |
+| Motion sensitivity | Transitions are disabled under `prefers-reduced-motion` | 2.3.3 |
+| Transparency | A published accessibility statement at `/accessibility` | required by the UK public sector regulations |
 
-- [ ] Screen reader pass with VoiceOver (macOS, iOS) and NVDA (Windows): are labels, errors and the results table announced sensibly?
-- [ ] Error messages announced when they appear, without the user having to hunt for them (WCAG 4.1.3).
-- [ ] 200% browser zoom and 400% text spacing overrides with no loss of content (1.4.4, 1.4.12).
-- [ ] Windows High Contrast and dark mode: nothing disappears.
-- [ ] Voice control: every control can be activated by its visible name (2.5.3).
-- [ ] Plain-language review of instructions and error wording (3.3.1, 3.3.3).
-- [ ] Review by disabled users, which is the only real test of usability.
+## What still needs a person
+
+The scripted checks confirm that the right markup and focus behaviour are present. They do
+not confirm that the experience is good. These remain **not done**:
+
+- [ ] Listen to the whole journey with VoiceOver (macOS, iOS) and NVDA (Windows). The checks prove the alert and status regions exist and take focus; only listening shows whether what is read out makes sense.
+- [ ] Try it with voice control and with a switch or other alternative input.
+- [ ] Plain-language review of the instructions and error wording.
+- [ ] Testing with disabled users.
+- [ ] An independent audit, if a conformance claim or VPAT is ever needed.
+
+Now covered by scripted checks, so no longer manual-only: 200% zoom, text spacing, forced
+colours, reduced motion, keyboard operation, error and status announcement markup, label in name.
 
 ## Legal position
 
@@ -60,7 +75,7 @@ An education product sold to universities would in practice also be asked for a 
 (Accessibility Conformance Report).
 
 **What can honestly be claimed for this app:** it passes every automated WCAG 2.2 A and AA
-check applied, and the scripted keyboard and reflow checks. **What cannot be claimed:** that
+check applied and all fifteen scripted checks, and it publishes an accessibility statement. **What cannot be claimed:** that
 it conforms to WCAG 2.2 AA or complies with any law. A conformance claim needs the manual
 checks above, and a legal view needs a qualified auditor.
 

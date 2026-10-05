@@ -1,7 +1,8 @@
 """Accessibility audit report.
 
-Scans every state of the page with axe-core and runs keyboard and reflow checks that axe
-cannot do, then writes:
+Scans every state of the page with axe-core, then runs scripted checks axe cannot do
+(keyboard use, announcements of errors and results, zoom, text spacing, forced colours,
+reduced motion), and writes:
 
     reports/accessibility.html   readable report, one section per page state
     reports/accessibility.json   full machine-readable results
@@ -75,12 +76,12 @@ def _keyboard_checks(page) -> list[dict]:
     """Things axe cannot test: real tab order, visible focus, and submitting by keyboard."""
     page.goto("/")
     order, focus_visible = [], True
-    for _ in range(8):
+    for _ in range(10):
         page.keyboard.press("Tab")
         info = page.evaluate(
             """() => { const e = document.activeElement; if (!e || e === document.body) return null;
                  const s = getComputedStyle(e);
-                 return {id: e.id || e.getAttribute('data-testid') || e.tagName.toLowerCase(),
+                 return {id: e.id || e.getAttribute('data-testid') || e.getAttribute('role') || (e.tagName.toLowerCase() + ':' + e.textContent.trim().slice(0, 24)),
                          ring: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0 || s.boxShadow !== 'none'}; }"""
         )
         if info is None or (order and info["id"] == order[0]):
@@ -131,6 +132,101 @@ def _reflow_checks(browser, base_url: str) -> list[dict]:
     ]
 
 
+TEXT_SPACING_CSS = "* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }"
+
+
+def _announcement_checks(page) -> list[dict]:
+    """Outcome of a submission must reach assistive technology without the user hunting for it."""
+    page.goto("/")
+    page.keyboard.press("Tab")
+    first = page.evaluate("document.activeElement.textContent.trim()")
+    page.keyboard.press("Enter")
+    skipped_to = page.evaluate("document.activeElement.id")
+
+    page.goto("/")
+    _submit(page, {"title": "", "author": "", "text": "short"})
+    page.wait_for_selector("#error-summary")
+    err = page.evaluate(
+        """() => { const e = document.getElementById('error-summary');
+             return {focused: document.activeElement === e, role: e.getAttribute('role'),
+                     links: [...e.querySelectorAll('a')].map(a => a.getAttribute('href')),
+                     invalid: [...document.querySelectorAll('[aria-invalid=true]')].map(i => i.id),
+                     described: [...document.querySelectorAll('[aria-invalid=true]')].every(i =>
+                        i.getAttribute('aria-describedby').split(' ').some(id => document.getElementById(id).textContent.trim())),
+                     title: document.title}; }"""
+    )
+    page.goto("/")
+    _submit(page, CLEAN)
+    page.wait_for_selector("#status-message")
+    ok = page.evaluate(
+        "() => { const e = document.getElementById('status-message'); return {focused: document.activeElement === e, role: e.getAttribute('role'), text: e.textContent.trim()}; }"
+    )
+    name = page.get_by_role("button", name="Check similarity").count()
+    return [
+        {"check": "First tab stop is a skip link that moves focus to the main content", "wcag": "2.4.1 Bypass Blocks",
+         "pass": first == "Skip to main content" and skipped_to == "main", "detail": f"first stop: {first!r}; focus after activating: #{skipped_to}"},
+        {"check": "Validation errors are summarised in an alert that receives focus", "wcag": "4.1.3 Status Messages, 3.3.1 Error Identification",
+         "pass": err["focused"] and err["role"] == "alert" and err["links"] == ["#title", "#author", "#text"],
+         "detail": f"role={err['role']}, focused={err['focused']}, links={err['links']}"},
+        {"check": "Each invalid field is marked invalid and tied to its error text", "wcag": "3.3.1 Error Identification, 1.3.1 Info and Relationships",
+         "pass": err["invalid"] == ["title", "author", "text"] and err["described"], "detail": f"aria-invalid on {err['invalid']}"},
+        {"check": "Page title announces the error state", "wcag": "2.4.2 Page Titled",
+         "pass": err["title"].startswith("Error:"), "detail": err["title"]},
+        {"check": "A successful submission is confirmed in a status message that receives focus", "wcag": "4.1.3 Status Messages",
+         "pass": ok["focused"] and ok["role"] == "status" and "Submission added" in ok["text"], "detail": ok["text"][:90]},
+        {"check": "The button's accessible name matches its visible label", "wcag": "2.5.3 Label in Name",
+         "pass": name == 1, "detail": "button exposed as 'Check similarity'"},
+    ]
+
+
+def _adaptation_checks(browser, base_url: str) -> list[dict]:
+    """User-chosen display settings: text spacing, zoom, forced colours, reduced motion."""
+    out = []
+    overflow_js = "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+    clipped_js = """() => [...document.querySelectorAll('h1,h2,p,label,button,th,td,li,span,a')].filter(e => {
+        const s = getComputedStyle(e); return e.textContent.trim() && s.overflow !== 'visible' && s.overflowX !== 'auto'
+          && (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1); }).map(e => e.outerHTML.slice(0, 60))"""
+
+    # bypass_csp lets the test inject the spacing rules the way a user style sheet or browser
+    # extension would; those are not subject to the page's Content Security Policy either.
+    ctx = browser.new_context(base_url=base_url, viewport={"width": 1280, "height": 800}, bypass_csp=True)
+    page = ctx.new_page(); page.goto("/"); _submit(page, COPIED); page.wait_for_selector("#status-message"); page.wait_for_load_state("load")
+    page.add_style_tag(content=TEXT_SPACING_CSS)
+    clipped = page.evaluate(clipped_js); overflow = page.evaluate(overflow_js)
+    out.append({"check": "Increased text spacing causes no clipped or overlapping text", "wcag": "1.4.12 Text Spacing",
+                "pass": not clipped and overflow <= 0, "detail": "; ".join(clipped) or "no clipped text, no page overflow"})
+    ctx.close()
+
+    # 200% zoom on a 1280 px window is the same layout as a 640 px viewport.
+    ctx = browser.new_context(base_url=base_url, viewport={"width": 640, "height": 400})
+    page = ctx.new_page(); page.goto("/"); _submit(page, COPIED); page.wait_for_selector("#status-message"); page.wait_for_load_state("load")
+    overflow = page.evaluate(overflow_js)
+    visible = page.get_by_test_id("submit-button").is_visible() and page.get_by_label("Paper text").is_visible()
+    out.append({"check": "At 200% zoom all content and controls remain available without sideways page scrolling", "wcag": "1.4.4 Resize Text",
+                "pass": overflow <= 0 and visible, "detail": f"page overflow {overflow}px at the 200% layout"})
+    ctx.close()
+
+    ctx = browser.new_context(base_url=base_url, forced_colors="active")
+    page = ctx.new_page(); page.goto("/"); _submit(page, COPIED); page.wait_for_selector("#status-message"); page.wait_for_load_state("load")
+    borders = page.evaluate(
+        """() => ['.btn', '#title', '.pill', '.card'].map(sel => { const s = getComputedStyle(document.querySelector(sel));
+             return [sel, s.borderTopStyle !== 'none' && parseFloat(s.borderTopWidth) > 0]; })"""
+    )
+    missing = [sel for sel, has in borders if not has]
+    out.append({"check": "In forced-colours (high contrast) mode, controls and status badges keep a visible boundary", "wcag": "1.4.11 Non-text Contrast",
+                "pass": not missing, "detail": "missing border on " + ", ".join(missing) if missing else "button, input, status pill and cards all have borders"})
+    forced_axe = _axe(page)
+    ctx.close()
+
+    ctx = browser.new_context(base_url=base_url, reduced_motion="reduce")
+    page = ctx.new_page(); page.goto("/")
+    dur = page.evaluate("getComputedStyle(document.querySelector('.btn')).transitionDuration")
+    out.append({"check": "Animations and transitions are switched off when the user asks for reduced motion", "wcag": "2.3.3 Animation from Interactions",
+                "pass": all(float(d.strip().rstrip('s')) == 0 for d in dur.split(',')), "detail": f"button transition-duration: {dur}"})
+    ctx.close()
+    return out, forced_axe
+
+
 def audit(base_url: str) -> dict:
     from playwright.sync_api import sync_playwright
 
@@ -144,12 +240,16 @@ def audit(base_url: str) -> dict:
         states.append({"name": "Initial page", **_axe(page)})
 
         _submit(page, CLEAN); _submit(page, COPIED)
-        states.append({"name": "With clear and flagged results", **_axe(page)})
+        states.append({"name": "With results and a success message", **_axe(page)})
 
         _submit(page, {"title": "", "author": "", "text": "short"})
         states.append({"name": "Validation errors shown", **_axe(page)})
 
         manual_auto = _keyboard_checks(page)
+        manual_auto += _announcement_checks(page)
+
+        page.goto("/accessibility")
+        states.append({"name": "Accessibility statement page", **_axe(page)})
         ctx.close()
 
         mctx = browser.new_context(base_url=base_url, viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
@@ -158,6 +258,9 @@ def audit(base_url: str) -> dict:
         mctx.close()
 
         manual_auto += _reflow_checks(browser, base_url)
+        adaptation, forced_axe = _adaptation_checks(browser, base_url)
+        manual_auto += adaptation
+        states.append({"name": "Forced-colours (high contrast) mode", **forced_axe})
         browser.close()
 
     return {
@@ -184,7 +287,7 @@ def to_markdown(result: dict) -> str:
              "| Measure | Result |", "|---|---:|",
              f"| WCAG rule violations | {s['violations']} |", f"| Distinct rules passed | {s['rules_passed']} |",
              f"| Rules needing human review | {s['needs_review']} |",
-             f"| Scripted keyboard and reflow checks failed | {s['scripted_failed']} of {len(result['scripted_checks'])} |", "",
+             f"| Scripted checks failed | {s['scripted_failed']} of {len(result['scripted_checks'])} |", "",
              "Automated checks cover only part of WCAG. This is not a conformance claim."]
     return "\n".join(lines) + "\n"
 
@@ -226,12 +329,12 @@ table{{border-collapse:collapse;width:100%}} td,th{{text-align:left;padding:.5re
 <div class="card"><b>{s['violations']}</b>WCAG rule violations</div>
 <div class="card"><b>{s['rules_passed']}</b>distinct rules passed</div>
 <div class="card"><b>{s['needs_review']}</b>rules needing human review</div>
-<div class="card"><b>{len(result['scripted_checks']) - s['scripted_failed']}/{len(result['scripted_checks'])}</b>keyboard and reflow checks passed</div>
+<div class="card"><b>{len(result['scripted_checks']) - s['scripted_failed']}/{len(result['scripted_checks'])}</b>scripted checks passed</div>
 </div>
 <div class="note"><strong>Scope of this report.</strong> Automated rules can confirm only part of WCAG. A clean result here is
 necessary for conformance but not sufficient. Screen reader behaviour, meaningful labels, error wording and
 content clarity need the manual checks listed in <code>docs/11_accessibility.md</code>.</div>
-<section><h2>Scripted keyboard and reflow checks</h2><table><thead><tr><th scope="col">Result</th><th scope="col">Check</th><th scope="col">WCAG criterion</th><th scope="col">Detail</th></tr></thead><tbody>{rows}</tbody></table></section>
+<section><h2>Scripted checks beyond axe: keyboard, announcements, display settings</h2><table><thead><tr><th scope="col">Result</th><th scope="col">Check</th><th scope="col">WCAG criterion</th><th scope="col">Detail</th></tr></thead><tbody>{rows}</tbody></table></section>
 {sections}
 </main></body></html>"""
 

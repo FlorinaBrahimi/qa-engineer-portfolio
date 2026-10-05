@@ -65,6 +65,12 @@ Notes:        suspected cause, related tickets
 - **Expected:** no technology disclosure. **Actual:** `Server: Werkzeug/3.1 Python/3.12`
 - **Resolution:** `Server` header overridden in the app's `after_request` hook so every environment behaves the same. Verified by the Java and Python security suites, closed.
 
+### DEF-108 (S4 / P3) UI: footer link target is smaller than 24 px
+
+- **Found by:** the audit's target-size check, minutes after the accessibility statement link was added
+- **Expected:** stand-alone links are at least 24 by 24 px (WCAG 2.5.8). **Actual:** the footer link was about 17 px high.
+- **Resolution:** stand-alone links given a 24 px minimum height. Caught and fixed before release. Verified, closed.
+
 ### DEF-107 (S3 / P2) UI: results table cannot be scrolled by keyboard on narrow screens
 
 - **Environment:** all, at viewport widths below 820 px
