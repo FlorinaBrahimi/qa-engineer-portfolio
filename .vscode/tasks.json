@@ -1,0 +1,196 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Tests: all (local)",
+      "type": "shell",
+      "command": "env -u BASE_URL make test",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Full Python suite with an HTML report in reports/all.html",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Tests: smoke",
+      "type": "shell",
+      "command": "env -u BASE_URL make smoke",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Fast checks",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": "test"
+    },
+    {
+      "label": "Java: API tests (local app)",
+      "type": "shell",
+      "command": "(env -u BASE_URL -u SUBMISSION_API_KEY PORT=5001 python3 -m app.server > /dev/null 2>&1 & echo $! > /tmp/sut-vscode.pid); sleep 2; (cd java-api-tests && mvn -B clean test -Dbase.url=http://localhost:5001); RC=$?; kill $(cat /tmp/sut-vscode.pid); exit $RC",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Starts the app, runs the REST Assured suite, stops the app",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": "test"
+    },
+    {
+      "label": "Java: API + AWS resource tests (live)",
+      "type": "shell",
+      "command": "set -a; source .env; set +a; make java-aws",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Runs against the deployed stack, including DynamoDB, Lambda and CloudWatch checks",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": "test"
+    },
+    {
+      "label": "Performance: JMeter",
+      "type": "shell",
+      "command": "env -u BASE_URL make perf && open reports/perf-html/index.html",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "20 users for 30 seconds, then opens the dashboard",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": "test"
+    },
+    {
+      "label": "Accessibility: audit and open report",
+      "type": "shell",
+      "command": "env -u BASE_URL make a11y; open reports/accessibility.html",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "WCAG 2.2 AA scan plus scripted checks",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": "test"
+    },
+    {
+      "label": "Security: scans",
+      "type": "shell",
+      "command": "make audit",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "pip-audit, bandit, cfn-lint, gitleaks",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": "test"
+    },
+    {
+      "label": "Unit tests with coverage",
+      "type": "shell",
+      "command": "env -u BASE_URL make unit && open reports/coverage/index.html",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Coverage report opens in the browser",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": "test"
+    },
+    {
+      "label": "Open report: last full test run",
+      "type": "shell",
+      "command": "open reports/all.html",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "reports/all.html",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Open report: last live AWS run",
+      "type": "shell",
+      "command": "open reports/live.html",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "reports/live.html",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Test plan: publish latest results to AWS",
+      "type": "shell",
+      "command": "set -a; source .env; set +a; make test-plan-sync",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Updates the QA Test Plan app",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "AWS pipeline: status",
+      "type": "shell",
+      "command": "make aws-pipeline-status",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Stage-by-stage status of the latest CodePipeline run",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    }
+  ]
+}

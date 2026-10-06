@@ -1,0 +1,27 @@
+{
+  "python.defaultInterpreterPath": "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "tests",
+    "ai_testing",
+    "-p",
+    "no:cacheprovider"
+  ],
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  "python.envFile": "${workspaceFolder}/.vscode/local.env",
+  "python.terminal.useEnvFile": false,
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.maven.enabled": true,
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "java-api-tests/target": true,
+    "build": true
+  },
+  "files.associations": {
+    "Jenkinsfile": "groovy",
+    "*.jmx": "xml"
+  },
+  "testing.openTesting": "openOnTestStart"
+}

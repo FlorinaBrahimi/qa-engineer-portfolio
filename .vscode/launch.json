@@ -1,0 +1,345 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Tests: all (local)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-ra",
+        "--html",
+        "reports/all.html",
+        "--self-contained-html",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 1
+      }
+    },
+    {
+      "name": "Tests: smoke",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-m",
+        "smoke",
+        "-v",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 2
+      }
+    },
+    {
+      "name": "Tests: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "${file}",
+        "-v",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 3
+      }
+    },
+    {
+      "name": "Tests: unit",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "tests/unit",
+        "-v",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 4
+      }
+    },
+    {
+      "name": "Tests: API",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "tests/api",
+        "-v",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 5
+      }
+    },
+    {
+      "name": "Tests: UI (browser visible)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-m",
+        "ui",
+        "-v",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 6
+      },
+      "env": {
+        "HEADED": "1"
+      }
+    },
+    {
+      "name": "Tests: UI (headless)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-m",
+        "ui",
+        "-v",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 7
+      }
+    },
+    {
+      "name": "Tests: security",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "tests/security",
+        "-v",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 8
+      }
+    },
+    {
+      "name": "Tests: accessibility",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "tests/accessibility",
+        "-v",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 9
+      }
+    },
+    {
+      "name": "Tests: integration + scale",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-m",
+        "integration or scale",
+        "-v",
+        "-s",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 10
+      }
+    },
+    {
+      "name": "Tests: re-run last failures",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "--last-failed",
+        "-v"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "1 Local tests",
+        "order": 11
+      }
+    },
+    {
+      "name": "Tests: live AWS (smoke, API, security, UI)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-m",
+        "smoke or api or security or ui or a11y",
+        "-v",
+        "--html",
+        "reports/live.html",
+        "--self-contained-html",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "2 Live AWS",
+        "order": 1
+      }
+    },
+    {
+      "name": "Tests: live AWS (smoke only)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-m",
+        "smoke",
+        "-v",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "2 Live AWS",
+        "order": 2
+      }
+    },
+    {
+      "name": "App: run locally on port 5001",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "app.server",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "3 App and reports",
+        "order": 1
+      },
+      "env": {
+        "PORT": "5001"
+      }
+    },
+    {
+      "name": "Report: accessibility audit",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.a11y_report",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "3 App and reports",
+        "order": 2
+      }
+    },
+    {
+      "name": "Report: flakiness prediction",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "ai_testing.predict_flaky",
+      "args": [
+        "ai_testing/test_history.csv"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "3 App and reports",
+        "order": 3
+      }
+    },
+    {
+      "name": "Jira: preview defect sync (dry run)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.jira_sync",
+      "args": [
+        "--dry-run"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.vscode/local.env",
+      "justMyCode": true,
+      "presentation": {
+        "group": "3 App and reports",
+        "order": 4
+      }
+    }
+  ]
+}

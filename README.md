@@ -25,6 +25,20 @@ make deploy           # deploy to AWS (Lambda + DynamoDB), see infra/README.md
 Run a slice: `pytest -m smoke`, `pytest -m "ui or a11y"`, `pytest -m api -n auto`.
 Target a deployed environment: `BASE_URL=https://staging.example pytest -m smoke`.
 
+## Run from VS Code
+
+Open the folder in VS Code with the Python extension installed.
+
+- **Testing panel** (beaker icon): every test is listed with a play button and a debug button.
+- **Run and Debug** (Cmd+Shift+D): choose a configuration from the dropdown, such as
+  "Tests: smoke", "Tests: UI (browser visible)" or "Tests: current file", then press F5.
+  Breakpoints work.
+- **Tasks** (Cmd+Shift+P, "Tasks: Run Test Task"): the Java suite, JMeter, the accessibility
+  audit and the security scans.
+
+Local runs never use `.env`, so they cannot touch the deployed site by accident. Only the
+configurations labelled "live AWS" load it.
+
 ## API key
 
 `qa-demo-key` is the default for local, Docker and CI test runs only. The deployed AWS app uses

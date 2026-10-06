@@ -299,7 +299,7 @@ Resources:
               - Branches: { Includes: [!Ref BranchName] }
                 # Documentation and GitHub-only workflow changes cannot affect this pipeline,
                 # so they do not spend build minutes on it.
-                FilePaths: { Excludes: [".github/**", "docs/**", "**/*.md", "Jenkinsfile", "infra/pipeline.yaml", "infra/pipeline-setup.sh"] }
+                FilePaths: { Excludes: [".github/**", "docs/**", "**/*.md", "Jenkinsfile", "infra/pipeline.yaml", "infra/pipeline-setup.sh", ".vscode/**"] }
       Stages:
         - Name: Source
           Actions:
